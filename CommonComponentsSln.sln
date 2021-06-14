@@ -7,9 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonComponentsTests", "Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "CommonComponents\Common.csproj", "{224EBC6B-DD93-443F-91EA-CDCFE242DFA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Faeric.HighPerformanceDataStructures", "HighPerformanceDataStructures\Faeric.HighPerformanceDataStructures.csproj", "{E83B3A3F-E023-444F-9624-918749A8C713}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faeric.HighPerformanceDataStructures", "HighPerformanceDataStructures\Faeric.HighPerformanceDataStructures.csproj", "{E83B3A3F-E023-444F-9624-918749A8C713}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HighPerformanceDataStructures.Tests", "HighPerformanceDataStructures.Tests\HighPerformanceDataStructures.Tests.csproj", "{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faeric.HighPerformanceDataStructures.Tests", "HighPerformanceDataStructures.Tests\Faeric.HighPerformanceDataStructures.Tests.csproj", "{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
