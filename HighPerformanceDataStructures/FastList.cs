@@ -22,12 +22,15 @@ namespace Faeric.HighPerformanceDataStructures
         public T[] Items => _items;
         T[] _items;
 
-        public int Count => _count;
+        public int Count { get => _count; set => _count = value}
         int _count;
 
         public int Capacity => _items.Length;
 
-        public T this[int idx] => _items[idx];
+        public T this[int idx] {
+            get => _items [idx];
+            set => _items[idx] = value;
+        }
 
         public T Last => _items[_count - 1];
 
@@ -43,12 +46,57 @@ namespace Faeric.HighPerformanceDataStructures
             _items[_count++] = item;
         }
 
+        /// <summary>Adds the item if its not already present in the list.</summary>
+        /// <returns>True if item was added, else false</returns>
+        public bool AddUnique(T itm)
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                if (EqualityComparer<T>.Default.Equals(_items[i], itm))
+                    return false;
+            }
+
+            Add(itm);
+            return true;
+        }
+
+        /// <summary>
+        /// Performs an array copy from newItems to internal array using new items length and offset
+        /// <br/><br/>SAFE: Automatically increases capacity if new items would exceed it
+        /// </summary>
+        /// <param name="newItems"></param>
+        public void AddRange(T[] newItems)
+        {
+            EnsureCapacityOverhead(newItems.Length);
+            Array.Copy(newItems, 0, _items, _count, newItems.Length);
+            _count = _count + newItems.Length;
+        }
+
+        /// <summary>
+        /// Performs an array copy from newItems to internal array using new items length and offset
+        /// <br/><br/>SAFE: Automatically increases capacity if new items would exceed it
+        /// </summary>
+        /// <param name="newItems"></param>
+        /// <param name="length">length of newItems to add</param>
+        /// <param name="start">where to start in newItems array</param>
+        public void AddRange(T[] newItems, int length, int start = 0)
+        {
+            EnsureCapacityOverhead(length - start);
+            Array.Copy(newItems, start, _items, _count, length);
+            _count = _count + (length - start);
+        }
+
         /// <summary>Makes sure array size is at least capacity. If not, size is increased to exactly capacity.</summary>
-        public void EnsureCapacity(int capacity)
+        public void EnsureCapacityMatch(int capacity)
         {
             if (_items.Length < capacity)
                 IncreaseCapacity(capacity);
         }
+
+        /// <summary>Makes sure there are at least a number of overhead slots remaining. If not, increases capacity to (Count + overhead)</summary>
+        /// <param name="capacity"></param>
+        public void EnsureCapacityOverhead(int overhead)
+            => EnsureCapacityMatch(_count + overhead);
 
         void IncreaseCapacity(int newCapacity)
         {
@@ -62,6 +110,14 @@ namespace Faeric.HighPerformanceDataStructures
         public FastList(int capacity)
         {
             _items = new T[capacity];
+        }
+
+        /// <summary>Creates a new FastList and sets the Items to array. Sets Count explicitly. Capacity will be the array length.</summary>
+        /// <param name="array"></param>
+        public FastList(T[] array, int cnt)
+        {
+            _items = array;
+            _count = cnt;
         }
 
         /// <summary>Assumes list is already ordered according to the given refGreaterThanTest. Finds the correct position for new item and inserts it. Avg time: O(n/2)</summary>
@@ -107,10 +163,11 @@ namespace Faeric.HighPerformanceDataStructures
 
 
         public void Clear() => _count = 0;
-        public void Clear(int newCapacity)
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
+        public void TrimExcess(int maxCapacity)
         {
-            _count = 0;
-            _items = new T[newCapacity];
+            if (maxCapacity < _items.Length)
+                _items = new T[maxCapacity];
         }
 
         public void RemoveLast() => _count--;
@@ -241,6 +298,15 @@ namespace Faeric.HighPerformanceDataStructures
                 }
                 _items[j + 1] = key;
             }
+        }
+
+        public FastList<T> DeepCopy()
+        {
+            var newList = new FastList<T>(Capacity);
+            newList._count = _count;
+
+            Array.Copy(_items, newList._items, _count);
+            return newList;
         }
 
     }

@@ -11,15 +11,21 @@ namespace Faeric.HighPerformanceDataStructures
 
     /// <summary>
     /// Like FastList but for ValueTypes managed BY REF. Do NOT use this with Reference types -- use FastList for that purpose.
-    /// <br/><br/>However, items are added strictly with AddByRef(), which eliminates unnecessary copies. This is useful for storing structs significantly larger than 4 bytes. There is still a 'ref' copy cost, which equates to a 4 byte (or 8-byte in 64-bit mode) copy anyway. So if your structs are less than 9 to 16 bytes and/or you want value-copy semantics, you probably should not use this data structure.
+    /// <br/><br/>However, items are added strictly with AddByRef(), which eliminates unnecessary copies. This is useful for storing structs significantly larger than 4 bytes. There is still a 'ref' copy cost, which equates to a 4 byte (or 8-byte in 64-bit mode) copy anyway. So if your structs are less than 9 to 16 bytes and/or you want value-copy semantics, you may not want to use this data structure.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class RefList<T> : ISortedRefList<T>
     {
+        /// <summary>
+        /// Use Caution when mutating the Items array directly.
+        /// </summary>
+        public T[] Items => _items;
         T[] _items;
 
-        public int Count => _count;
+        public int Count { get => _count; set => _count = value}
         int _count;
+
+        public int Capacity => _items.Length;
 
         public ref T this[int idx] => ref _items[idx];
 
@@ -37,12 +43,43 @@ namespace Faeric.HighPerformanceDataStructures
             return ref _items[_count++];
         }
 
+        /// <summary>
+        /// Performs an array copy from newItems to internal array using new items length and offset
+        /// <br/><br/>SAFE: Automatically increases capacity if new items would exceed it
+        /// </summary>
+        /// <param name="newItems"></param>
+        public void AddRange(T[] newItems)
+        {
+            EnsureCapacityOverhead(newItems.Length);
+            Array.Copy(newItems, 0, _items, _count, newItems.Length);
+            _count = _count + newItems.Length;
+        }
+
+        /// <summary>
+        /// Performs an array copy from newItems to internal array using new items length and offset
+        /// <br/><br/>SAFE: Automatically increases capacity if new items would exceed it
+        /// </summary>
+        /// <param name="newItems"></param>
+        /// <param name="length">length of newItems to add</param>
+        /// <param name="start">where to start in newItems array</param>
+        public void AddRange(T[] newItems, int length, int start = 0)
+        {
+            EnsureCapacityOverhead(length - start);
+            Array.Copy(newItems, start, _items, _count, length);
+            _count = _count + (length - start);
+        }
+
         /// <summary>Makes sure array size is at least capacity. If not, size is increased to exactly capacity.</summary>
-        public void EnsureCapacity(int capacity)
+        public void EnsureCapacityMatch(int capacity)
         {
             if (_items.Length < capacity)
                 IncreaseCapacity(capacity);
         }
+
+        /// <summary>Makes sure there are at least a number of overhead slots remaining. If not, increases capacity to (Count + overhead)</summary>
+        /// <param name="capacity"></param>
+        public void EnsureCapacityOverhead(int overhead)
+            => EnsureCapacityMatch(_count + overhead);
 
         void IncreaseCapacity(int newCapacity)
         {
@@ -103,6 +140,14 @@ namespace Faeric.HighPerformanceDataStructures
 
 
         public void Clear() => _count = 0;
+
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
+        public void TrimExcess(int maxCapacity)
+        {
+            if(maxCapacity < _items.Length)
+                _items = new T[maxCapacity];
+        }
+
         public void RemoveLast() => _count--;
         public void RemoveLastN(int n) => _count -= n;
 
@@ -219,6 +264,15 @@ namespace Faeric.HighPerformanceDataStructures
                 }
                 _items[j + 1] = key;
             }
+        }
+
+        public RefList<T> DeepCopy()
+        {
+            var newList = new RefList<T>(Capacity);
+            newList._count = _count;
+
+            Array.Copy(_items, newList._items, _count);
+            return newList;
         }
     }
 }

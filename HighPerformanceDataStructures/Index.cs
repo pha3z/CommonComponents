@@ -7,30 +7,49 @@ using System.Threading.Tasks;
 
 namespace Faeric.HighPerformanceDataStructures
 {
-    public delegate void EmptySlotSetter<T>(ref T item);
-    public delegate bool EmptySlotTester<T>(ref T item);
+    public delegate void EmptySlotSetByRef<T>(ref T item);
+    public delegate bool EmptySlotTestByRef<T>(ref T item);
 
     /// <summary>
-    /// An auto-expanded array (similar to a list). However, this is meant for persistent index-based lookups.
-    /// There will be holes in the list as items are removed and lazily replaced.
-    /// Therefore the list is not meant for iteration unless you manage the holes.
+    /// An auto-expanded array meant for persistent index-based lookups.
+    /// Holes remain when items are removed, so indexes stay persistent.
+    /// <br/><br/>
+    /// To enumerate the list, use the All() or All_IncludingEmpty(). NOTE: Enumeration returns values by value instead of by ref. Be aware of this!!
+    /// By design, IEnumerable is NOT implemented. This makes it so the dot (.) operator does not show you all the LINQ junk you don't want to see.
     /// <br/><br/>
     /// When you invoke Add() or Add_Uninitialized(), the first available slot will be used and its index returned.
     /// <br/><br/>
     /// You must provide an emptySlotTester(ref T item) and an emptySlotEraser(ref T item). These will be used to flag and test empty slots.
     /// <br/><br/>
-    /// Empty slots are skipped when enumerating the collection.
-    /// <br/><br/>
-    /// If you want to iterate all elements including empty slots, use the AllSlots_IncludingEmpty() method.
-    /// <br/><br/>
-    /// PERF NOTE: REMOVE methods invoke a Sort on the internal free slots list to keep them sorted. This makes Adds() super fast, but Removes slow.
-    /// <br/><br/>CAUTION with REFERENCE TYPES: Passing by ref with reference types with pass a reference to the variable and behavior may be unexpected. This data structure is not recommended for reference types. Copy it and create a regular value semantic version.
+    /// PERF NOTE: REMOVE methods invoke a Sort on the internal free slots list to keep them sorted. This makes frequent Add/Remove rather slow. If you expect to add and remove frequently, consider a HashSet or Dictionary instead. The Index data structure is intended for situations where you are doing a lot more lookups than add/removes.
+    /// <br/><br/>WARNING ABOUT REFERENCE TYPES: The behavior is not tested for reference types. The EmptySlot delegates pass by ref... not sure what will happen if you use these with reference types.
     /// </summary>
-    public class AutoIndex<T> : IEnumerable<T>
+    public class Index<T>
     {
+        throw new NotImplementedException();
+
+        //PERFORMANCE IDEA
+        //We sort Remove so that Adds will always try to go for the first slot.
+        //You might get better overall performance by grabbing randomly from the bag of freeslots
+        //We should have this as a configuration option perhaps??
+        //Like you configure a delegate for the Remove() method
+        //Configure to work on first-slot priority or slot-grabbag
+        //Yeah
+        //Or its modal even
+        //in modal configuration
+        //the Remove delegate would check to see if the number of free slots compared to count of items
+        //If they are equal, then the new freeslot is added.
+        //  and then the freeslots array is sorted so that first slot becomes prioritized
+        //If there are more free slots than items, then the we assume the free slots are already sorted (from the last removal)
+        //and we add the new free slot in sorted order so everything remains sorted
+        //
+        //We may want a scalar instead of just "half of the count"
+        //Not perfect idea but it could be a good compromise for performance
+        //
+        
+
         /// <summary>
         /// FOR STORING STRUCTS: You can use this to directly manipulate values.
-        /// <br/>FOR STORING REFERENCE TYPES: You should NOT use the Items property at all. Instead, use the direct Indexer for safer code.
         /// <br/><br/>WARNING!!! DO NOT HOLD A REFERENCE TO ITEMS PROPERTY WHILE INVOKING OTHER METHODS!!
         /// <br/><br/>If you call other methods that replace the underlying items array (such as Add() or EnsureCapacity()), your reference to Items may become invalid!
         /// <br/>Make sure to invoke other methods BEFORE grabbing the Items property and operating on it. Discard your reference as soon as your are done mutating items.
@@ -42,14 +61,21 @@ namespace Faeric.HighPerformanceDataStructures
         public int Count => _count; int _count;
         public int Capacity => _items.Length;
 
+        /// <summary>
+        /// Returns T by ref. This makes it the same behavior as C# Array Indexers.
+        /// </summary>
+        /// <param name="idx"></param>
+        /// <returns></returns>
         public ref T this[int idx] => ref _items[idx];
-        public ref T Last => ref _items[_count - 1];
+        public ref T LastByRef => ref _items[_count - 1];
 
         List<int> _freeSlots = new List<int>(20);
 
-        EmptySlotSetter<T> _emptySlotSetter;
-        protected EmptySlotTester<T> _emptySlotTest;
+        EmptySlotSetByRef<T> _emptySlotSetter;
+        protected EmptySlotTestByRef<T> _emptySlotTest;
         Func<T> _referenceFactory;
+
+        int _iterator;
 
         /// <summary>
         /// 
@@ -58,15 +84,15 @@ namespace Faeric.HighPerformanceDataStructures
         /// <param name="emptySlotEraser">Invoked with ref to the slot from which an item was removed.  Setter should mutate the value such that the emptySlotTest will return true.</param>
         /// <param name="emptySlotTest">Invoked with ref to the slot from which an item was removed. Must return true for empty slots.</param>
         /// <param name="referenceTypeFactory">Optional: When using AutoIndex with reference types (objects), you can provide a factory method.<br/>This method will be invoked anytime new slots would return null.<br/>This means Add_Uninitialized() will NEVER produce NULL values. It will guarantee the slot is filled with an instance of the type.<br/><br/>DO NOT USE THIS WITH STRUCTS/VALUE-TYPES!!! BEHAVIOR IS UNDEFINED!</param>
-        public AutoIndex(int initialCapacity, EmptySlotSetter<T> emptySlotEraser, EmptySlotTester<T> emptySlotTest, Func<T> referenceTypeFactory = null)
+        public Index(int initialCapacity, EmptySlotSetByRef<T> emptySlotEraser, EmptySlotTestByRef<T> emptySlotTest, Func<T> referenceTypeFactory = null)
         {
             _items = new T[initialCapacity];
             _emptySlotSetter = emptySlotEraser;
             _emptySlotTest = emptySlotTest;
             _referenceFactory = referenceTypeFactory;
 
-            if (emptySlotEraser == null) throw new AutoIndexException($"{nameof(emptySlotEraser)} canot be null.");
-            if (emptySlotTest == null) throw new AutoIndexException($"{nameof(emptySlotTest)} canot be null.");
+            if (emptySlotEraser == null) throw new IndexException($"{nameof(emptySlotEraser)} canot be null.");
+            if (emptySlotTest == null) throw new IndexException($"{nameof(emptySlotTest)} canot be null.");
 
         }
 
@@ -75,7 +101,19 @@ namespace Faeric.HighPerformanceDataStructures
         /// </summary>
         /// <param name="item"></param>
         /// <returns>The index where the item was added (first free slot or the end of the list)</returns>
-        public virtual int Add(ref T item)
+        public virtual int Add(T item)
+        {
+            int idx = Add_Uninitialized();
+            _items[idx] = item;
+            return idx;
+        }
+
+        /// <summary>
+        /// Adds the item in the first free slot (could be the end of the list).
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns>The index where the item was added (first free slot or the end of the list)</returns>
+        public virtual int AddByRef(ref T item)
         {
             int idx = Add_Uninitialized();
             _items[idx] = item;
@@ -134,7 +172,7 @@ namespace Faeric.HighPerformanceDataStructures
         {
             _count = 0;
             _freeSlots.Clear();
-            _freeSlots.Capacity =newCapacity;
+            _freeSlots.Capacity = newCapacity;
             _items = new T[newCapacity]; ; //Let GC handle the old items array
 
         }
@@ -148,9 +186,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>The index of the removed match or -1 if no match was found</returns>
         public virtual int Remove(RefPredicate<T> match)
         {
-            for(int i = 0; i < _count; i++)
+            for (int i = 0; i < _count; i++)
             {
-                if(match(ref _items[i]))
+                if (match(ref _items[i]))
                 {
                     Remove(i);
                     return i;
@@ -173,14 +211,16 @@ namespace Faeric.HighPerformanceDataStructures
             _freeSlots.Sort((a, b) => b.CompareTo(a)); //Sort DESCENDING, because when we add items, we grab indexes from the end of the list which will give us the first available indexes
         }
 
-        public virtual IEnumerable<T> AllSlots_IncludingEmpty()
+        /// <summary>CAUTION: Returns by value instead of by ref. You will be working on copies of the data. If you want to iterate by ref, use the ResetIterator() and Next() methods</summary>
+        public virtual IEnumerable<T> All_IncludingEmpty()
         {
             for (int i = 0; i < _items.Length; i++)
                 yield return _items[i];
         }
 
 
-        public virtual IEnumerator<T> GetEnumerator()
+        /// <summary>CAUTION: Returns by value instead of by ref. You will be working on copies of the data. If you want to iterate by ref, use the ResetIterator() and Next() methods</summary>
+        public virtual IEnumerable<T> All()
         {
             for (int i = 0; i < _count; i++)
             {
@@ -189,6 +229,28 @@ namespace Faeric.HighPerformanceDataStructures
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator()  => this.GetEnumerator();
+        public virtual void ResetIterator() => _iterator = 0;
+
+        public virtual bool NextIsEoL() 
+        {
+            while(_emptySlotTest(ref _items[_iterator]))
+            {
+                _iterator++;
+
+                if (_iterator == _count)
+                    return true;
+            }
+
+            return _iterator == _count;
+        }
+
+        /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
+        /// <returns></returns>
+        public virtual ref T NextByRef() => ref _items[_iterator];
+
+        /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
+        /// <returns></returns>
+        public virtual T Next() => _items[_iterator];
+
     }
 }

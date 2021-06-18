@@ -26,6 +26,6 @@ namespace Faeric.HighPerformanceDataStructures
         /// Makes sure array size is at least capacity. If not, size is increased to exactly capacity.
         /// </summary>
         /// <param name="capacity"></param>
-        void EnsureCapacity(int capacity);
+        void EnsureCapacityMatch(int capacity);
     }
 }

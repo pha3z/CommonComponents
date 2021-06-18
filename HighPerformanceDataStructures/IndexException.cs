@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace Faeric.HighPerformanceDataStructures
 {
-    public class AutoIndexException : Exception
+    public class IndexException : Exception
     {
-        public AutoIndexException(string message)
+        public IndexException(string message)
             : base(message)
         {
         }
 
-        public AutoIndexException(string message, Exception inner)
+        public IndexException(string message, Exception inner)
             : base(message, inner)
         {
         }

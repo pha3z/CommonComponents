@@ -30,7 +30,7 @@ namespace Faeric.HighPerformanceDataStructures
     /// <br/><br/>
     /// USE FLAG BAG when *very few* of your items meet the monitored condition.
     /// </summary>
-    public class MonitoredAutoIndex_FlagBag<T> : AutoIndex<T>
+    public class MonitoredIndex_FlagBag<T> : Index<T>
     {
         //This variation uses an internal List instead of 
 
@@ -40,19 +40,27 @@ namespace Faeric.HighPerformanceDataStructures
         FastList<int> _flaggedItemIndexes;
         RefPredicate<T> _monitoredCondition;
 
-        public MonitoredAutoIndex_FlagBag(int initialCapacity,
+        public MonitoredIndex_FlagBag(int initialCapacity,
             RefPredicate<T> monitoredCondition,
-            EmptySlotSetter<T> emptySlotEraser,
-            EmptySlotTester<T> emptySlotTest,
+            EmptySlotSetByRef<T> emptySlotEraser,
+            EmptySlotTestByRef<T> emptySlotTest,
             Func<T> referenceTypeFactory = null)
             : base(initialCapacity, emptySlotEraser, emptySlotTest, referenceTypeFactory)
         {
             _flaggedItemIndexes = new FastList<int>(4);
         }
 
-        public override int Add(ref T item)
+        public override int Add(T item)
         {
-            int idx = base.Add(ref item);
+            int idx = base.Add(item);
+            if (_monitoredCondition(ref item))
+                _flaggedItemIndexes.Add(idx);
+            return idx;
+        }
+
+        public override int AddByRef(ref T item)
+        {
+            int idx = base.AddByRef(ref item);
             if (_monitoredCondition(ref item))
                 _flaggedItemIndexes.Add(idx);
             return idx;
@@ -116,7 +124,7 @@ namespace Faeric.HighPerformanceDataStructures
         /// <summary>
         /// Enumerates the collection returning only items with monitored condition.
         /// <br/><br/>Skips empty slots.
-        /// <br/><br/>VALUE TYPE CAUTION: Be careful when using this with value types. All other methods depend on 'ref' returns, but this method will return COPIES of the value types.
+        /// <br/><br/>CAUTION: Returns by value instead of by ref. You will be working on copies of the data.
         /// </summary>
         public IEnumerable<T> GetItems_WithMonitoredCondition()
         {
@@ -135,7 +143,7 @@ namespace Faeric.HighPerformanceDataStructures
         /// <br/><br/>Skips empty slots.
         /// <br/><br/>Same as GetItems_ variant, except this method will automatically call UpdateMonitor() after each item has been returned and a fetch of next item is attempted.
         /// <br/>This means if you are mutating the items, the monitor for each will be updated before fetching the next item (or end-of-collection).
-        /// <br/><br/>VALUE TYPE WARNING: Do NOT use this with Value Types. All other methods depend on 'ref' returns, but this method will return COPIES of the value types. That means when you mutate the items, you are only mutating the copies -- not the items in the collection.
+        /// <br/><br/>CAUTION: Returns by value instead of by ref. You will be working on copies of the data.
         /// <br/><br/>GENERAL USE WARNING: Use this in a foreach loop only. Do NOT use it with anything else. And most definitely DO NOT use 'break' or 'return' inside the foreach loop. The entire process needs to iterate all items or you will get invalid state.
         /// </summary>
         public IEnumerable<T> ProcessItems_WithMonitoredCondition_NoBreak()
