@@ -56,7 +56,7 @@ namespace Faeric.HighPerformanceDataStructures
         public T[] Items => _items;
 
         protected T[] _items;
-        public int Count => _count; int _count;
+        public int Count = 0;
         public int Capacity => _items.Length;
 
         /// <summary>
@@ -65,12 +65,14 @@ namespace Faeric.HighPerformanceDataStructures
         /// <param name="idx"></param>
         /// <returns></returns>
         public ref T this[int idx] => ref _items[idx];
-        public ref T LastByRef => ref _items[_count - 1];
+
+        public int LastIndex = 0;
+        public ref T LastByRef => ref _items[LastIndex];
 
         List<int> _freeSlots = new List<int>(20);
 
         EmptySlotSetByRef<T> _emptySlotSetter;
-        protected EmptySlotTestByRef<T> _emptySlotTest;
+        protected EmptySlotTestByRef<T> _isEmpty;
         Func<T> _referenceFactory;
 
         int _iterator;
@@ -86,7 +88,7 @@ namespace Faeric.HighPerformanceDataStructures
         {
             _items = new T[initialCapacity];
             _emptySlotSetter = emptySlotEraser;
-            _emptySlotTest = emptySlotTest;
+            _isEmpty = emptySlotTest;
             _referenceFactory = referenceTypeFactory;
 
             if (emptySlotEraser == null) throw new IndexException($"{nameof(emptySlotEraser)} canot be null.");
@@ -106,16 +108,9 @@ namespace Faeric.HighPerformanceDataStructures
             return idx;
         }
 
-        /// <summary>
-        /// Adds the item in the first free slot (could be the end of the list).
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns>The index where the item was added (first free slot or the end of the list)</returns>
-        public virtual int AddByRef(ref T item)
-        {
+        public virtual ref T AddByRef(){
             int idx = Add_Uninitialized();
-            _items[idx] = item;
-            return idx;
+            return ref _items[idx];
         }
 
         /// <summary>Returns index to first free slot. After returning, position at index is considered to have a valid item in it, but you will need to set its value. </summary>
@@ -126,8 +121,8 @@ namespace Faeric.HighPerformanceDataStructures
             {
                 //free slots should be already sorted DESCENDING.  We grab the last item from free slots which points us to the FIRST available slot.
                 int idx = _freeSlots[_freeSlots.Count - 1];
-                _freeSlots.RemoveAt(_freeSlots.Count - 1);
-                _count++;
+                _freeSlots.RemoveAt(idx);
+                Count++;
 
                 if (_referenceFactory != null)
                     _items[idx] = _referenceFactory();
@@ -136,13 +131,14 @@ namespace Faeric.HighPerformanceDataStructures
             }
             else
             {
-                if (_count == _items.Length)
-                    IncreaseCapacity(_count * 2);
+                if (Count == _items.Length)
+                    IncreaseCapacity(Count * 2);
 
                 if (_referenceFactory != null)
-                    _items[_count] = _referenceFactory();
+                    _items[Count] = _referenceFactory();
 
-                return _count++;
+                LastIndex = Count;
+                return Count++;
             }
         }
 
@@ -162,20 +158,31 @@ namespace Faeric.HighPerformanceDataStructures
 
         public virtual void Clear()
         {
-            _count = 0;
+            Count = 0;
+            LastIndex = -1;
             _freeSlots.Clear();
         }
 
-        public virtual void Clear(int newCapacity)
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
+        /// <returns>True if internal array was larger than max capacity -- a trim occurred. Else false</returns>
+        public virtual bool TrimExcess(int maxCapacity)
         {
-            _count = 0;
-            _freeSlots.Clear();
-            _freeSlots.Capacity = newCapacity;
-            _items = new T[newCapacity]; ; //Let GC handle the old items array
+            if (maxCapacity < _items.Length)
+            {
+                _items = new T[maxCapacity];
+                _freeSlots = new List<int>(maxCapacity);
+                if (Count > maxCapacity)
+                {
+                    Count = maxCapacity;
+                    LastIndex = Count - 1;
+                }
+                return true;
+            }
 
+            return false;
         }
 
-        public virtual void RemoveLast() => Remove(_count - 1);
+        public virtual void RemoveLast() => RemoveAt(LastIndex);
 
         /// <summary>
         /// Invokes a sort on the internal FREE SLOTS list.
@@ -184,11 +191,12 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>The index of the removed match or -1 if no match was found</returns>
         public virtual int Remove(RefPredicate<T> match)
         {
-            for (int i = 0; i < _count; i++)
+            int stopAt = LastIndex + 1;
+            for (int i = 0; i < stopAt; i++)
             {
                 if (match(ref _items[i]))
                 {
-                    Remove(i);
+                    RemoveAt(i);
                     return i;
                 }
             }
@@ -200,19 +208,36 @@ namespace Faeric.HighPerformanceDataStructures
         /// Invokes a sort on the internal FREE SLOTS list.
         /// </summary>
         /// <param name="idx"></param>
-        public virtual void Remove(int idx)
+        public virtual void RemoveAt(int idx)
         {
             _emptySlotSetter(ref _items[idx]);
 
-            _count--;
+            Count--;
             _freeSlots.Add(idx);
             _freeSlots.Sort((a, b) => b.CompareTo(a)); //Sort DESCENDING, because when we add items, we grab indexes from the end of the list which will give us the first available indexes
+
+            //If we removed the last item, we need to traverse backwards to find the next item (non-empty slot)
+            //and mark it as the last index.
+            if (LastIndex == idx)
+            {
+                for(int i = LastIndex - 1; i > -1; i--)
+                {
+                    if (!_isEmpty(ref _items[i]))
+                    {
+                        LastIndex = i;
+                        return;
+                    }
+                }
+
+                LastIndex = -1;
+            }
         }
 
         /// <summary>CAUTION: Returns by value instead of by ref. You will be working on copies of the data. If you want to iterate by ref, use the ResetIterator() and Next() methods</summary>
         public virtual IEnumerable<T> All_IncludingEmpty()
         {
-            for (int i = 0; i < _items.Length; i++)
+            int stopAt = LastIndex + 1;
+            for (int i = 0; i < stopAt; i++)
                 yield return _items[i];
         }
 
@@ -220,9 +245,10 @@ namespace Faeric.HighPerformanceDataStructures
         /// <summary>CAUTION: Returns by value instead of by ref. You will be working on copies of the data. If you want to iterate by ref, use the ResetIterator() and Next() methods</summary>
         public virtual IEnumerable<T> All()
         {
-            for (int i = 0; i < _count; i++)
+            int stopAt = LastIndex + 1;
+            for (int i = 0; i < stopAt; i++)
             {
-                if (!_emptySlotTest(ref _items[i]))
+                if (!_isEmpty(ref _items[i]))
                     yield return _items[i];
             }
         }
@@ -231,24 +257,27 @@ namespace Faeric.HighPerformanceDataStructures
 
         public virtual bool NextIsEoL() 
         {
-            while(_emptySlotTest(ref _items[_iterator]))
+            if (_iterator > LastIndex)
+                return true;
+
+            while(_isEmpty(ref _items[_iterator]))
             {
                 _iterator++;
 
-                if (_iterator == _count)
+                if (_iterator > LastIndex)
                     return true;
             }
 
-            return _iterator == _count;
+            return _iterator > LastIndex;
         }
 
         /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
         /// <returns></returns>
-        public virtual ref T NextByRef() => ref _items[_iterator];
+        public virtual ref T NextByRef() => ref _items[_iterator++];
 
         /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
         /// <returns></returns>
-        public virtual T Next() => _items[_iterator];
+        public virtual T Next() => _items[_iterator++];
 
     }
 }

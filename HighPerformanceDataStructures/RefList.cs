@@ -141,11 +141,20 @@ namespace Faeric.HighPerformanceDataStructures
 
         public void Clear() => _count = 0;
 
-        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
-        public void TrimExcess(int maxCapacity)
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity.
+        /// <br/><br/>Count is also decreased if it exceeds max capacity. Creates garbage.</summary>
+        /// <returns>True if internal array was larger than max capacity -- a trim occurred. Else false</returns>
+        public bool TrimExcess(int maxCapacity)
         {
-            if(maxCapacity < _items.Length)
+            if (maxCapacity < _items.Length)
+            {
                 _items = new T[maxCapacity];
+                if (_count > maxCapacity)
+                    _count = maxCapacity;
+                return true;
+            }
+
+            return false;
         }
 
         public void RemoveLast() => _count--;

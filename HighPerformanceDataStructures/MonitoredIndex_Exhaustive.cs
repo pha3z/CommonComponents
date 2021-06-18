@@ -48,12 +48,22 @@ namespace Faeric.HighPerformanceDataStructures
             return idx;
         }
 
-        public override int AddByRef(ref T item)
+        public override ref T AddByRef()
         {
-            int idx = base.AddByRef(ref item);
+            int idx = Add_Uninitialized();
+            ref T item = ref _items[idx];
             _monitors[idx] = _monitoredCondition(ref item);
-            return idx;
+            return ref item;
         }
+
+        //This is an oxymoron.  You can't add by ref, because the values have to be copied into the array.
+            /*
+            public override int AddByRef(ref T item)
+            {
+                int idx = base.AddByRef(ref item);
+
+                return idx;
+            }*/
 
         public override int Add_Uninitialized()
         {
@@ -73,6 +83,17 @@ namespace Faeric.HighPerformanceDataStructures
             _monitors = newBitArray;
         }
 
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
+        /// <returns>True if internal array was larger than max capacity -- a trim occurred. Else false</returns> 
+        public override bool TrimExcess(int maxCapacity)
+        {
+            bool trimmed = base.TrimExcess(maxCapacity);
+            if(trimmed)
+                _monitors = new BitArray(maxCapacity, false);
+
+            return trimmed;
+        }
+
         public override int Remove(RefPredicate<T> match)
         {
             int idx = base.Remove(match);
@@ -84,9 +105,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// Invokes a sort on the internal FREE SLOTS list.
         /// </summary>
         /// <param name="idx"></param>
-        public override void Remove(int idx)
+        public override void RemoveAt(int idx)
         {
-            base.Remove(idx);
+            base.RemoveAt(idx);
             _monitors[idx] = false;
         }
 
@@ -107,7 +128,7 @@ namespace Faeric.HighPerformanceDataStructures
         {
             for(int i = 0; i < Count; i++)
             {
-                if (_monitors[i] == true && !_emptySlotTest(ref _items[i]))
+                if (_monitors[i] == true && !_isEmpty(ref _items[i]))
                     yield return _items[i];
             }
         }
@@ -124,7 +145,7 @@ namespace Faeric.HighPerformanceDataStructures
         {
             for (int i = 0; i < Count; i++)
             {
-                if (_monitors[i] == true && !_emptySlotTest(ref _items[i]))
+                if (_monitors[i] == true && !_isEmpty(ref _items[i]))
                     yield return _items[i];
 
                 UpdateMonitor(i);

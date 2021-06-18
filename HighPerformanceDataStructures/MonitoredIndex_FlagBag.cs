@@ -58,12 +58,14 @@ namespace Faeric.HighPerformanceDataStructures
             return idx;
         }
 
-        public override int AddByRef(ref T item)
+        public override ref T AddByRef()
         {
-            int idx = base.AddByRef(ref item);
+            int idx = Add_Uninitialized();
+            ref T item =  ref _items[idx];
             if (_monitoredCondition(ref item))
                 _flaggedItemIndexes.Add(idx);
-            return idx;
+
+            return ref item;
         }
 
         public override int Add_Uninitialized()
@@ -79,6 +81,17 @@ namespace Faeric.HighPerformanceDataStructures
             base.IncreaseCapacity(newCapacity);
         }
 
+        /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity. Creates garbage</summary>
+        /// <returns>True if internal array was larger than max capacity -- a trim occurred. Else false</returns> 
+        public override bool TrimExcess(int maxCapacity)
+        {
+            bool trimmed = base.TrimExcess(maxCapacity);
+            if (trimmed)
+                _flaggedItemIndexes = new FastList<int>(maxCapacity);
+
+            return trimmed;
+        }
+
         public override int Remove(RefPredicate<T> match)
         {
             int idx = base.Remove(match);
@@ -89,9 +102,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// Invokes a sort on the internal FREE SLOTS list.
         /// </summary>
         /// <param name="idx"></param>
-        public override void Remove(int idx)
+        public override void RemoveAt(int idx)
         {
-            base.Remove(idx);
+            base.RemoveAt(idx);
             SetMonitorCondition_NotMet(idx);
         }
 
@@ -132,7 +145,7 @@ namespace Faeric.HighPerformanceDataStructures
             for(int i = 0; i < _flaggedItemIndexes.Count; i++)
             {
                 idx = _flaggedItemIndexes[i];
-                if (!_emptySlotTest(ref _items[idx]))
+                if (!_isEmpty(ref _items[idx]))
                     yield return _items[idx];
             }
             
