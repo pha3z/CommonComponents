@@ -5,11 +5,11 @@ using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 namespace Faeric.HighPerformanceDataStructures.Tests
 {
     [TestClass]
-    public class AutoIndex
+    public class FastListTests
     {
-        private AutoIndex<int> CreateTestList()
+        FastList<int> CreateTestList()
         {
-            var list = new AutoIndex<int>(2);
+            var list = new FastList<int>(2);
 
             IsTrue(list.Count == 0);
             for (int i = 0; i < 3; i++)
@@ -207,7 +207,8 @@ namespace Faeric.HighPerformanceDataStructures.Tests
 
             list.Add(5);
 
-            list.Clear(2);
+            list.Clear();
+            list.TrimExcess(2);
             IsTrue(list.Count == 0);
             IsTrue(list.Capacity == 2);
         }

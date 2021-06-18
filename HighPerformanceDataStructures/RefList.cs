@@ -22,7 +22,7 @@ namespace Faeric.HighPerformanceDataStructures
         public T[] Items => _items;
         T[] _items;
 
-        public int Count { get => _count; set => _count = value}
+        public int Count { get => _count; set => _count = value; }
         int _count;
 
         public int Capacity => _items.Length;

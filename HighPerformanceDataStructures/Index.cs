@@ -26,8 +26,6 @@ namespace Faeric.HighPerformanceDataStructures
     /// </summary>
     public class Index<T>
     {
-        throw new NotImplementedException();
-
         //PERFORMANCE IDEA
         //We sort Remove so that Adds will always try to go for the first slot.
         //You might get better overall performance by grabbing randomly from the bag of freeslots
