@@ -26,32 +26,15 @@ namespace Faeric.HighPerformanceDataStructures
     /// </summary>
     public class TrinaryIndex<T>
     {
-        //PERFORMANCE IDEA
-        //BaggedIndex: free slots are just a bag that is searched when a new item is to be added
-        //FWIndex: Front-Weighted Index
-        //  In the FWIndex, two collections are used for free slots -- the front slots and the back slots
-        //  All free slots that are less than the LastIndex/2 are kept in the front slots
-        //  All free slots greater or equal LastIndex/2 are kept in the back slots
-        //  This requires ZERO sorting when you remove an item -- and thus add the index to free slot
-        //  All you have to do is math to decide between front and back slots
-        //  Whenever you remove an item in position LastIndex, you will have to set the new LastIndex
-        //  And then remove all empty slots greater than new LastIndex
-        //
-        //  The result of all the above is that as indexes diminish in size, new items will have a tendency
-        //  to gravitate toward the front of the index -- thus keeping things more compact.
-        //
-        //  The above has a small issue in that if the LastIndex is removed and the new LastIndex is significantly lower
-        //  (resulting in removal of a large number of free slots that must be removed), the front slots bag will be bloated
-        //  meaning it might hold a lot of free slots that belong in the back slots bag.
-        //  
-        //  A way to mititgate it is to increase from just front and back slots to front, middle, and back slots
-        //  By using Thirds, when the LastIndex is reduced significantly, front and middle could both be bloated, but they are at least
-        //  divided.  So when you grab new items, you will grab slots from front with priority and middle secondly
-        //  If you end up in a situation where the LastIndex reduces in size so much that the LastIndex is less than the former
-        //  position between Front and Middle, you would be best served to resort everything.
-        //  This should happen rarely since that is a substantial change in size.
-        //  You could name this:
-        //TrinaryIndex
+        //TrinaryIndex uses three bags of free slots
+        //Whenever you remove an item, the index is added to the front, middle, or back bag (a bucketization technique)
+        //Whenever a new item is added, the index of a free slot is fetched by first checking the front, then middle, and then back bag
+        //If none of the bags has a free slot index, then Count is increased and a new item is added to the end.
+
+        //There is an optional Sort flag which can be used to cause a sort of the bags when the LastIndex is reduced
+        //significantly.  However, only benchmarks would show whether there's any benefit to this sort.
+        //I suspect that in most cases, the sort will actually cause worse average performance. It really depends on how much adding and removing you're doing
+        //vs how much you're simply looking up data.
 
         const int MIN_CAPACITY = 6;
 
