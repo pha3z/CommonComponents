@@ -101,6 +101,8 @@ namespace Faeric.HighPerformanceDataStructures
 
         int _iterator;
 
+        bool _useTrinarySort = false;
+
         /// <summary>
         /// 
         /// </summary>
@@ -108,7 +110,7 @@ namespace Faeric.HighPerformanceDataStructures
         /// <param name="emptySlotEraser">Invoked with ref to the slot from which an item was removed.  Setter should mutate the value such that the emptySlotTest will return true.</param>
         /// <param name="emptySlotTest">Invoked with ref to the slot from which an item was removed. Must return true for empty slots.</param>
         /// <param name="referenceTypeFactory">Optional: When using AutoIndex with reference types (objects), you can provide a factory method.<br/>This method will be invoked anytime new slots would return null.<br/>This means Add_Uninitialized() will NEVER produce NULL values. It will guarantee the slot is filled with an instance of the type.<br/><br/>DO NOT USE THIS WITH STRUCTS/VALUE-TYPES!!! BEHAVIOR IS UNDEFINED!</param>
-        public TrinaryIndex(int initialCapacity, EmptySlotSetByRef<T> emptySlotEraser, EmptySlotTestByRef<T> emptySlotTest /*, Func<T> referenceTypeFactory = null*/)
+        public TrinaryIndex(int initialCapacity, EmptySlotSetByRef<T> emptySlotEraser, EmptySlotTestByRef<T> emptySlotTest, bool useTrinarySort = false /*, Func<T> referenceTypeFactory = null*/)
         {
             if (initialCapacity < MIN_CAPACITY)
                 initialCapacity = MIN_CAPACITY;
@@ -116,6 +118,7 @@ namespace Faeric.HighPerformanceDataStructures
             _items = new T[initialCapacity];
             _emptySlotSetter = emptySlotEraser;
             _isEmpty = emptySlotTest;
+            _useTrinarySort = useTrinarySort;
             //_referenceFactory = referenceTypeFactory;
 
             if (emptySlotEraser == null) throw new IndexException($"{nameof(emptySlotEraser)} canot be null.");
@@ -244,9 +247,15 @@ namespace Faeric.HighPerformanceDataStructures
         /// <br/>Instead we remember the LastIndex from the last time we sorted
         /// <br/>If the LastIndex has reduced at least 1/2 since that happened, then we resort.
         /// <br/>Also, anytime the LastIndex INCREASES, we need to reset the lastIndex sort indicator to the increased value.
+        /// PERFORMANCE NOTE:
+        /// This is the most expensive operation for the TinaryIndex.
+        /// It also might not be necessary at all. Even if you never sorted, everything would still functional correctly
+        /// thanks to the trinary slot groups.
+        /// You may want to do sophisticated benchmarks where you enable and disable this with the constructor switch
         /// </summary>
         void When_LastIndexReduced_Do_SortFreeSlotsConditionally()
         {
+
 
             //If DIFFERENCE < ORIGINAL / 2, we haven't changed enough to demand a resort.
             if ((_lastIndex_sortIndicator - _lastIndex) < _lastIndex_sortIndicator / 2)
@@ -398,7 +407,8 @@ namespace Faeric.HighPerformanceDataStructures
                     RemoveOrphanedFreeSlots();
                     RecalcFreeSlotBounds();
                     RecountElements();
-                    When_LastIndexReduced_Do_SortFreeSlotsConditionally();
+                    if(_useTrinarySort)
+                        When_LastIndexReduced_Do_SortFreeSlotsConditionally();
                 }
 
                 return true;
@@ -470,7 +480,8 @@ namespace Faeric.HighPerformanceDataStructures
                         _lastIndex = i;
                         RemoveOrphanedFreeSlots();
                         RecalcFreeSlotBounds();
-                        When_LastIndexReduced_Do_SortFreeSlotsConditionally(); 
+                        if (_useTrinarySort)
+                            When_LastIndexReduced_Do_SortFreeSlotsConditionally(); 
                         PutFreeSlot(idx);
                         return;
                     }
