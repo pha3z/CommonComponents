@@ -48,26 +48,17 @@ namespace Faeric.HighPerformanceDataStructures
             return idx;
         }
 
-        public override ref T AddByRef()
+        public override ref T Add_Uninitialized_ByRef()
         {
-            int idx = Add_Uninitialized();
+            int idx = Add_Uninitialized_byIndex();
             ref T item = ref _items[idx];
             _monitors[idx] = _monitoredCondition(ref item);
             return ref item;
         }
 
-        //This is an oxymoron.  You can't add by ref, because the values have to be copied into the array.
-            /*
-            public override int AddByRef(ref T item)
-            {
-                int idx = base.AddByRef(ref item);
-
-                return idx;
-            }*/
-
-        public override int Add_Uninitialized()
+        public override int Add_Uninitialized_byIndex()
         {
-            int idx = base.Add_Uninitialized();
+            int idx = base.Add_Uninitialized_byIndex();
             _monitors[idx] = _monitoredCondition(ref _items[idx]);
             return idx;
         }

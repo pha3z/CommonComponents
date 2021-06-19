@@ -10,8 +10,7 @@ namespace Faeric.HighPerformanceDataStructures
 {
 
     /// <summary>
-    /// Allows similar usage to Queue`.
-    /// <br/><br/>However, items are added strictly with AddByRef(), which eliminates unnecessary copies. This is useful for storing structs significantly larger than 4 bytes. There is still a 'ref' copy cost, which equates to a 4 byte (or 8-byte in 64-bit mode) copy anyway. So if your structs are less than 9 to 16 bytes and/or you want value-copy semantics, you probably should not use this data structure.
+    /// A queue using a circular array.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class RefQueue<T>   where T : struct 
@@ -19,11 +18,27 @@ namespace Faeric.HighPerformanceDataStructures
         T[] _items;
 
         int _first = 0;
-        public int Last { get; private set; } = 0;
+        int Last { get; private set; } = 0;
 
         public int Count => _count; int _count  = 0;
+        public int Capacity => _items.Length;
 
         public ref T this[int idx] => ref _items[idx];
+
+        /// <summary>Same as AddByRef_Unsafe() except that the capacity will be checked before an item is added. Capacity will be doubled if more space is needed.</summary>
+        public void Enqueue(T item)
+        {
+            if (_items.Length == _count)
+                IncreaseCapacity(_items.Length * 2);
+
+            _count++;
+            Last++;
+
+            if (Last > _items.Length)
+                Last = 0;
+
+            _items[Last] = item;
+        }
 
         /// <summary>Same as AddByRef_Unsafe() except that the capacity will be checked before an item is added. Capacity will be doubled if more space is needed.</summary>
         public ref T EnqueueByRef()
@@ -37,7 +52,7 @@ namespace Faeric.HighPerformanceDataStructures
             if (Last > _items.Length)
                 Last = 0;
 
-            return ref _items[Last++];
+            return ref _items[Last];
         }
 
         /// <summary>Makes sure array size is at least capacity. If not, size is increased to exactly capacity.</summary>

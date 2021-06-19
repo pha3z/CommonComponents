@@ -58,9 +58,9 @@ namespace Faeric.HighPerformanceDataStructures
             return idx;
         }
 
-        public override ref T AddByRef()
+        public override ref T Add_Uninitialized_ByRef()
         {
-            int idx = Add_Uninitialized();
+            int idx = Add_Uninitialized_byIndex();
             ref T item =  ref _items[idx];
             if (_monitoredCondition(ref item))
                 _flaggedItemIndexes.Add(idx);
@@ -68,9 +68,9 @@ namespace Faeric.HighPerformanceDataStructures
             return ref item;
         }
 
-        public override int Add_Uninitialized()
+        public override int Add_Uninitialized_byIndex()
         {
-            int idx = base.Add_Uninitialized();
+            int idx = base.Add_Uninitialized_byIndex();
             if (_monitoredCondition(ref _items[idx]))
                 _flaggedItemIndexes.Add(idx);
             return idx;

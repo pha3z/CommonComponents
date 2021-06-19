@@ -27,24 +27,31 @@ namespace Faeric.HighPerformanceDataStructures
     public class Index<T>
     {
         //PERFORMANCE IDEA
-        //We sort Remove so that Adds will always try to go for the first slot.
-        //You might get better overall performance by grabbing randomly from the bag of freeslots
-        //We should have this as a configuration option perhaps??
-        //Like you configure a delegate for the Remove() method
-        //Configure to work on first-slot priority or slot-grabbag
-        //Yeah
-        //Or its modal even
-        //in modal configuration
-        //the Remove delegate would check to see if the number of free slots compared to count of items
-        //If they are equal, then the new freeslot is added.
-        //  and then the freeslots array is sorted so that first slot becomes prioritized
-        //If there are more free slots than items, then the we assume the free slots are already sorted (from the last removal)
-        //and we add the new free slot in sorted order so everything remains sorted
+        //BaggedIndex: free slots are just a bag that is searched when a new item is to be added
+        //FWIndex: Front-Weighted Index
+        //  In the FWIndex, two collections are used for free slots -- the front slots and the back slots
+        //  All free slots that are less than the LastIndex/2 are kept in the front slots
+        //  All free slots greater or equal LastIndex/2 are kept in the back slots
+        //  This requires ZERO sorting when you remove an item -- and thus add the index to free slot
+        //  All you have to do is math to decide between front and back slots
+        //  Whenever you remove an item in position LastIndex, you will have to set the new LastIndex
+        //  And then remove all empty slots greater than new LastIndex
         //
-        //We may want a scalar instead of just "half of the count"
-        //Not perfect idea but it could be a good compromise for performance
+        //  The result of all the above is that as indexes diminish in size, new items will have a tendency
+        //  to gravitate toward the front of the index -- thus keeping things more compact.
         //
-        
+        //  The above has a small issue in that if the LastIndex is removed and the new LastIndex is significantly lower
+        //  (resulting in removal of a large number of free slots that must be removed), the front slots bag will be bloated
+        //  meaning it might hold a lot of free slots that belong in the back slots bag.
+        //  
+        //  A way to mititgate it is to increase from just front and back slots to front, middle, and back slots
+        //  By using Thirds, when the LastIndex is reduced significantly, front and middle could both be bloated, but they are at least
+        //  divided.  So when you grab new items, you will grab slots from front with priority and middle secondly
+        //  If you end up in a situation where the LastIndex reduces in size so much that the LastIndex is less than the former
+        //  position between Front and Middle, you would be best served to resort everything.
+        //  This should happen rarely since that is a substantial change in size.
+        //  You could name this:
+        //TrinaryIndex
 
         /// <summary>
         /// FOR STORING STRUCTS: You can use this to directly manipulate values.
@@ -103,19 +110,19 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>The index where the item was added (first free slot or the end of the list)</returns>
         public virtual int Add(T item)
         {
-            int idx = Add_Uninitialized();
+            int idx = Add_Uninitialized_byIndex();
             _items[idx] = item;
             return idx;
         }
 
-        public virtual ref T AddByRef(){
-            int idx = Add_Uninitialized();
+        public virtual ref T Add_Uninitialized_ByRef(){
+            int idx = Add_Uninitialized_byIndex();
             return ref _items[idx];
         }
 
         /// <summary>Returns index to first free slot. After returning, position at index is considered to have a valid item in it, but you will need to set its value. </summary>
         /// <returns>Index to position where item has been added. Use index to set value of item.</returns>
-        public virtual int Add_Uninitialized()
+        public virtual int Add_Uninitialized_byIndex()
         {
             if (_freeSlots.Count > 0)
             {
@@ -253,29 +260,32 @@ namespace Faeric.HighPerformanceDataStructures
             }
         }
 
+        /// <summary>
+        /// Resets the internal items iterator. Iterating with Next() and HasNext() will skip empty slots.
+        /// </summary>
         public virtual void ResetIterator() => _iterator = 0;
 
-        public virtual bool NextIsEoL() 
+        public virtual bool HasNext() 
         {
             if (_iterator > LastIndex)
-                return true;
+                return false;
 
             while(_isEmpty(ref _items[_iterator]))
             {
                 _iterator++;
 
                 if (_iterator > LastIndex)
-                    return true;
+                    return false;
             }
 
-            return _iterator > LastIndex;
+            return _iterator <= LastIndex;
         }
 
-        /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
+        /// <summary>Call ResetIterator() before using Next(). CAUTION: You must check HasNext() before calling Next() to avoid faulty results. </summary>
         /// <returns></returns>
         public virtual ref T NextByRef() => ref _items[_iterator++];
 
-        /// <summary>Call ResetIterator() before using Next(). Also, Next() will NOT check for End-of-List. You must check the value of NextIsEoL() before invoking Next()</summary>
+        /// <summary>Call ResetIterator() before using Next(). CAUTION: You must check HasNext() before calling Next() to avoid faulty results.</summary>
         /// <returns></returns>
         public virtual T Next() => _items[_iterator++];
 

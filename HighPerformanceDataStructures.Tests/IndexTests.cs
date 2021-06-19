@@ -26,7 +26,7 @@ namespace Faeric.HighPerformanceDataStructures.Tests
             IsTrue(index.Count == 0);
             for (int i = 0; i < 3; i++)
             {
-                int idx = index.Add_Uninitialized();
+                int idx = index.Add_Uninitialized_byIndex();
                 index[idx].A = i;
                 
             }
@@ -61,15 +61,15 @@ namespace Faeric.HighPerformanceDataStructures.Tests
         }
 
         [TestMethod]
-        public void AddByRef()
+        public void Add_Uninitialized_ByRef()
         {
             var index = CreateTestIndex();
 
-            ref MyStruct s = ref index.AddByRef();
+            ref MyStruct s = ref index.Add_Uninitialized_ByRef();
             s.A = 10;
             IsTrue(index[3].A == 10);
 
-            ref MyStruct t = ref index.AddByRef();
+            ref MyStruct t = ref index.Add_Uninitialized_ByRef();
             t.A = 15;
             IsTrue(index[4].A == 15);
             IsTrue(index.Count == 5);
@@ -77,18 +77,18 @@ namespace Faeric.HighPerformanceDataStructures.Tests
         }
 
         [TestMethod]
-        public void Add_Uninitialized()
+        public void Add_Uninitialized_ByIndex()
         {
             var index = CreateTestIndex();
 
-            int i = index.Add_Uninitialized();
+            int i = index.Add_Uninitialized_byIndex();
             ref MyStruct s = ref index[i];
             s.A = 10;
             IsTrue(index[3].A == 10);
             IsTrue(index.Count == 4);
             IsTrue(index.Capacity == 4);
 
-            i = index.Add_Uninitialized();
+            i = index.Add_Uninitialized_byIndex();
             ref MyStruct s2 = ref index[i];
             s2.A = 15;
             IsTrue(index[4].A == 15);
@@ -190,12 +190,12 @@ namespace Faeric.HighPerformanceDataStructures.Tests
 
             for (int i = 0; i < index.Count; i++)
             {
-                IsFalse(index.NextIsEoL());
+                IsTrue(index.HasNext());
                 ref MyStruct s = ref index.NextByRef();
                 IsTrue(s.A == i);
             }
 
-            IsTrue(index.NextIsEoL());
+            IsFalse(index.HasNext());
         }
 
         [TestMethod]
@@ -209,7 +209,7 @@ namespace Faeric.HighPerformanceDataStructures.Tests
 
             for (int i = 0; i < index.Count; i++)
             {
-                IsFalse(index.NextIsEoL());
+                IsTrue(index.HasNext());
                 ref MyStruct s = ref index.NextByRef();
 
                 if (i == 0)
@@ -218,7 +218,7 @@ namespace Faeric.HighPerformanceDataStructures.Tests
                     IsTrue(s.A == 2);
             }
 
-            IsTrue(index.NextIsEoL());
+            IsFalse(index.HasNext());
         }
     }
 }
