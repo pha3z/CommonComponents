@@ -18,7 +18,7 @@ namespace Faeric.HighPerformanceDataStructures
         T[] _items;
 
         int _first = 0;
-        int Last { get; private set; } = 0;
+        public int Last { get; private set; } = 0;
 
         public int Count => _count; int _count  = 0;
         public int Capacity => _items.Length;

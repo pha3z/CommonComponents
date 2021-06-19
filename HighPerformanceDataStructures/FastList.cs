@@ -178,7 +178,7 @@ namespace Faeric.HighPerformanceDataStructures
             return false;
         }
 
-        public void RemoveLast() => _count--;
+        public int RemoveLast() => _count--;
         public void RemoveLastN(int n) => _count -= n;
 
         public void RemoveFirstN(int n)

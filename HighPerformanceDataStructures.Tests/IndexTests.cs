@@ -1,6 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Text;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
+using static System.Console;
+
 
 namespace Faeric.HighPerformanceDataStructures.Tests
 {
@@ -35,6 +38,52 @@ namespace Faeric.HighPerformanceDataStructures.Tests
             IsTrue(index.Count == 3);
 
             return index;
+        }
+
+        /// <summary>
+        /// Suggested sizes for testing: 14, 15, 16
+        /// </summary>
+        Index<MyStruct> CreateSnapshot(int size)
+        {
+            var index = new Index<MyStruct>(
+                initialCapacity: 2,
+                emptySlotEraser: EmptySlotEraser,
+                emptySlotTest: EmptySlotTester);
+
+            for (int i = 0; i < size; i++)
+            {
+                int idx = index.Add_Uninitialized_byIndex();
+                index[idx].A = i;
+
+            }
+
+            return index;
+        }
+
+        void Print(Index<MyStruct> index)
+        {
+            StringBuilder sb = new StringBuilder();
+            
+            for(int i = 0; i < index.Count; i++)
+            {
+                if (index[i].A < 0)
+                    sb.Append(" . ");
+                else
+                    sb.Append(" " + index[i].A);
+            }
+
+            WriteLine(sb.ToString());
+        }
+
+        void ShouldMatch(Index<MyStruct> index, int[] data)
+        {
+            IsTrue(index.Count == data.Length);
+
+            index.ResetIterator();
+            int i = 0;
+            while(index.HasNext())
+                IsTrue(index.Next().A == data[i]);
+
         }
 
         [TestMethod]
@@ -219,6 +268,26 @@ namespace Faeric.HighPerformanceDataStructures.Tests
             }
 
             IsFalse(index.HasNext());
+        }
+
+
+        [TestMethod]
+        public void SnapshotTest()
+        {
+            var index = CreateSnapshot(16);
+
+            Print(index);
+
+            index.RemoveAt(2);
+            index.RemoveAt(3);
+            index.RemoveAt(4);
+            index.RemoveAt(5);
+
+            Print(index);
+
+            index.RemoveAt(15);
+
+            ShouldMatch(index, new int[] { 0, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14 });
         }
     }
 }
