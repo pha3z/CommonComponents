@@ -1,0 +1,6 @@
+﻿It looks like you can use inheritance to create byref and byvalue versions of the TrinaryIndex
+You can check the algorithms again, but I believe everywhere where you would have to toggle between byref EmptySlotTest or byref EmptySlotSet versus by value,
+you can justify an if test, becuase the cost will be miniscule since its before a loop..
+There may be only one or two cases where it could matter... BUT:
+I think you could just capture the behavior you want to switch on in a delegate in the constructor and then you're never branching during runtime.
+Also using inheritance, you can create different constructor to accept the byref or byvalue delegates you need

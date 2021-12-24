@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Common
+namespace Common.FancyResults
 {
 	public static class ReturnResultObjectExtensions
     {
@@ -122,9 +122,9 @@ namespace Common
 		public IEnumerable<string> AllErrors(bool includeExceptionMessage = true)
         {
 			var aggregatedErrors = (agg_errors ?? new string[0]) as IEnumerable<string>;
-			var errors = err.AsSet().Concat(aggregatedErrors);
+			var errors = new string[] { err }.Concat(aggregatedErrors);
 			if (original_exception != null)
-				return errors.Concat(original_exception.Message.AsSet());
+				return errors.Concat(new string[] { original_exception.Message });
 			else
 				return errors;
 		}

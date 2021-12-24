@@ -8,14 +8,6 @@ namespace Common
 {
     public static class LINQ_Ext
     {
-        public static IEnumerable<T> AsSet<T>(this T item)
-        {
-            if (item == null)
-                return new List<T>();
-
-            return new List<T>() { item };
-        }
-
         public static bool IsEmpty<T>(this IEnumerable<T> c) => !c.Any();
 
         /// <summary>
