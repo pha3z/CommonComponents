@@ -281,6 +281,18 @@ namespace Faeric.HighPerformanceDataStructures
             return false;
         }
 
+        /// <summary>
+        /// Picks the best sorting algorithm based on count of items and performs the sort
+        /// </summary>
+        /// <param name="isGreaterThan"></param>
+        public void BestSort(Func<T, T, bool> isGreaterThan)
+        {
+            if (_count < 48)
+                InsertionSort(isGreaterThan);
+            else
+                QuickSort(isGreaterThan);
+        }
+
         /// <summary>Avg Time: O(n log(n)). Worst: O(n^2).   Operates directly on the underlying array.  Java considers it to be the fastest option for 47 to 285 items. </summary>
         public void QuickSort(Func<T,T, bool> isGreaterThan)
         {

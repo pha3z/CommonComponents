@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Faeric.Redzen.Sorting;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +31,9 @@ namespace Faeric.HighPerformanceDataStructures
         public ref T this[int idx] => ref _items[idx];
 
         public ref T Last => ref _items[_count - 1];
+
+        bool _useConsumerDefaultValue;
+        T _defaultValue;
 
         /// <summary>Adds an item without checking capacity first. Will throw Array Out-of-Bounds exception if there is no space left at the end of the internal array.</summary>
         public ref T AddByRef_Unsafe() => ref _items[_count++];
@@ -83,9 +87,13 @@ namespace Faeric.HighPerformanceDataStructures
 
         void IncreaseCapacity(int newCapacity)
         {
+            int oldLength = _items.Length;
             var newArray = new T[newCapacity];
-            Array.Copy(_items, newArray, _items.Length);
+            Array.Copy(_items, newArray, oldLength);
             _items = newArray; //Let GC handle the old items array
+
+            if(_useConsumerDefaultValue)
+                FillDefaultValues(oldLength);
         }
 
         private RefList() { }
@@ -93,6 +101,20 @@ namespace Faeric.HighPerformanceDataStructures
         public RefList(int capacity)
         {
             _items = new T[capacity];
+        }
+
+        /// <summary>
+        /// This overload allows a default value that will be used to fill new initialized values of the underlying array.
+        /// <br/>NOTE: Removed items will retain their value. If you want removed items to be changed to their default value, you will need to do it explicitly.
+        /// </summary>
+        /// <param name="capacity"></param>
+        /// <param name="defaultValue">The default value will be copied into all array slots when underlying array is initialized. It is also copied into new slots when the underlying array is copied (due to a capacity increase).</param>
+        public RefList(int capacity, T defaultValue )
+        {
+            _defaultValue = defaultValue;
+            _useConsumerDefaultValue = true;
+            _items = new T[capacity];
+            FillDefaultValues(0);
         }
 
         /// <summary>Assumes list is already ordered according to the given refGreaterThanTest. Finds the correct position for new item and inserts it. Avg time: O(n/2)</summary>
@@ -157,7 +179,9 @@ namespace Faeric.HighPerformanceDataStructures
             return false;
         }
 
+        /// <summary>Decrements Count. That's it.</summary>
         public void RemoveLast() => _count--;
+        /// <summary>Reduces Count by n. That's it.</summary>
         public void RemoveLastN(int n) => _count -= n;
 
         public void RemoveFirstN(int n)
@@ -244,8 +268,7 @@ namespace Faeric.HighPerformanceDataStructures
             return false;
         }
 
-
-
+        
         /// <summary>Avg Time: O(n log(n)). Worst: O(n^2).   Operates directly on the underlying array.  Java considers it to be the fastest option for 47 to 285 items. </summary>
         /// <param name="comparer"></param>
         public void QuickSort(RefGreaterThan<T> comparer)
@@ -282,6 +305,12 @@ namespace Faeric.HighPerformanceDataStructures
 
             Array.Copy(_items, newList._items, _count);
             return newList;
+        }
+
+        void FillDefaultValues(int start)
+        {
+            for (int i = start; i < _items.Length; i++)
+                _items[i] = _defaultValue;
         }
     }
 }
