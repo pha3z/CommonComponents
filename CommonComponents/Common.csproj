@@ -17,8 +17,4 @@
     <PackageReference Include="Serilog.Sinks.File" Version="4.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\MUD3_Webview_Editor\Steel.Serialization\Steel.Serialization.csproj" />
-  </ItemGroup>
-
 </Project>
