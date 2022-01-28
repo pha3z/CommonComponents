@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Common.FancyResults
@@ -133,6 +134,17 @@ namespace Common.FancyResults
 
 		public static R Ok()
 			=> new R(is_err: false);
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="ex"></param>
+		/// <param name="callerMethodName">Automatically populated with the calling method name</param>
+		/// <returns></returns>
+		public static R ErrFromException(Exception ex = null, [CallerMemberName] string callerMethodName = "")
+        {
+			return new R(is_err: true, errMsg: $"Exception occurred in method: '{callerMethodName}'", ex: ex);
+        }
 
 		public static R ErrFromException(string err, Exception ex = null)
 			=> new R(is_err: true, err, ex);

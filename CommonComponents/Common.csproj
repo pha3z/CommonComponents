@@ -17,4 +17,10 @@
     <PackageReference Include="Serilog.Sinks.File" Version="4.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Steel.Serialization">
+      <HintPath>..\_DLLDependencies\Steel.Serialization.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
