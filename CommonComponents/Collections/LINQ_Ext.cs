@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
-namespace Common
+namespace Common.Collections
 {
     public static class LINQ_Ext
     {
@@ -53,6 +53,21 @@ namespace Common
                 actn(el, i);
                 i++;
             }
+        }
+
+        /// <summary>
+        /// Creates a new collection of tuples where the singleValue combined with every element of the source collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="src"></param>
+        /// <param name="singleValue"></param>
+        /// <param name="putSingleValueFirst">If true, each tuple will be of pattern (singleValue, srcElement). If false, then (srcElement, singleValue)</param>
+        /// <returns></returns>
+        public static IEnumerable<(T,V)> ZipWithOne<T,V>(this IEnumerable<T> src, V singleValue, bool putSingleValueFirst = false)
+        {
+            foreach (var element in src)
+                yield return (element, singleValue);
         }
     }
 }

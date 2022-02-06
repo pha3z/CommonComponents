@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Common
+namespace Common.Collections
 {
     /// <summary>
     /// An excerpt of some of the extensions found here https://github.com/morelinq/MoreLINQ

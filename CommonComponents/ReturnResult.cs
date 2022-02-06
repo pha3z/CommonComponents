@@ -135,16 +135,8 @@ namespace Common.FancyResults
 		public static R Ok()
 			=> new R(is_err: false);
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="ex"></param>
-		/// <param name="callerMethodName">Automatically populated with the calling method name</param>
-		/// <returns></returns>
 		public static R ErrFromException(Exception ex = null, [CallerMemberName] string callerMethodName = "")
-        {
-			return new R(is_err: true, errMsg: $"Exception occurred in method: '{callerMethodName}'", ex: ex);
-        }
+			=> new R(is_err: true, errMsg: $"Exception occurred in method: '{callerMethodName}'", ex: ex);
 
 		public static R ErrFromException(string err, Exception ex = null)
 			=> new R(is_err: true, err, ex);
@@ -154,6 +146,16 @@ namespace Common.FancyResults
 
 		public static R<T> Ok<T>(T val)
 			=> new R<T>(valueIsOk: true, val, is_err: false);
+
+		/// <summary>
+		/// Creates a new Error Result. You may include the exception if an exception caused this error.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ex">Optional: include the exception if one occurred</param>
+		/// <param name="callerMethodName">Automatically populated with the caller name so error message will contain originating caller.</param>
+		/// <returns></returns>
+		public static R<T> ErrFromException<T>(Exception ex = null, [CallerMemberName] string callerMethodName = "")
+			=> new R<T>(valueIsOk: false, default(T), is_err: true, errMsg: $"Exception occurred in method: '{callerMethodName}'", ex: ex);
 
 		/// <summary>
 		/// Creates a new Error Result. You may include the exception if an exception caused this error.
