@@ -7,6 +7,32 @@ namespace Common
 {
     public static class StringExt
     {
+        public static string ToSafeString(this int? number, string format = null)
+        {
+            if (number.HasValue)
+            {
+                if(format == null)
+                    return number.Value.ToString();
+                else
+                    return number.Value.ToString(format);
+            }
+            else
+                return "";
+        }
+
+        public static string ToSafeString(this long? number, string format = null)
+        {
+            if (number.HasValue)
+            {
+                if (format == null)
+                    return number.Value.ToString();
+                else
+                    return number.Value.ToString(format);
+            }
+            else
+                return "";
+        }
+
         public static string Truncate(this string s, int maxLen)
         {
             return s.Substring(0, Min(maxLen, s.Length));
