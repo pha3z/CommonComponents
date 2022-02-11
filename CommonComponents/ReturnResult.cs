@@ -107,25 +107,25 @@ namespace Common.FancyResults
 		/// <param name="reverse"></param>
 		/// <param name="includeExceptionMessage">If the error originated from an exception, the exception message can be included.</param>
 		/// <returns></returns>
-		public string JoinErrors(string separator = " ", bool reverse = false, bool includeExceptionMessage = true)
+		public string JoinErrors(string separator = " ", bool reverse = false, bool includeExceptionMessages = true)
         {
 			return String.Join(separator, 
 				reverse 
-				? AllErrors().Reverse() 
-				: AllErrors());
+				? AllErrors(includeExceptionMessages).Reverse() 
+				: AllErrors(includeExceptionMessages));
         }
 
 		/// <summary>
 		/// Concatenates primary error with aggregated errors.
 		/// </summary>
-		/// <param name="includeExceptionMessage">If the error originated from an exception, the exception message can be included.</param>
+		/// <param name="includeExceptionMessages">If the error originated from an exception, the exception message can be included.</param>
 		/// <returns></returns>
-		public IEnumerable<string> AllErrors(bool includeExceptionMessage = true)
+		public IEnumerable<string> AllErrors(bool includeExceptionMessages = true)
         {
 			var aggregatedErrors = (agg_errors ?? new string[0]) as IEnumerable<string>;
 			var errors = new string[] { err }.Concat(aggregatedErrors);
-			if (original_exception != null)
-				return errors.Concat(new string[] { original_exception.Message });
+			if (includeExceptionMessages && original_exception != null)
+				return errors.Concat(new string[] { original_exception.AllMessages() });
 			else
 				return errors;
 		}
