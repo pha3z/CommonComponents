@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Faeric.HighPerformanceDataStructures
 {
-    public interface ISortedRefList<T> : IReadOnlySortedRefList<T>, IRefList_AddOnly<T>
+    public interface ISortedRefList<T> : IReadOnlySortedRefList<T>, IReadOnlyRefList<T>, IRefList_AddOnly<T>
     {
         void Clear();
         void InsertionSort(RefGreaterThan<T> greaterThan);
