@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30804.86
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32210.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonComponentsTests", "CommonComponentsSln\CommonComponentsTests.csproj", "{AD4EBAB8-482C-4338-BA90-E6E597B46007}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faeric.HighPerformanceDataStructures", "HighPerformanceDataStructures\Faeric.HighPerformanceDataStructures.csproj", "{E83B3A3F-E023-444F-9624-918749A8C713}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faeric.HighPerformanceDataStructures.Tests", "HighPerformanceDataStructures.Tests\Faeric.HighPerformanceDataStructures.Tests.csproj", "{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faeric.SleepyCheetahMsgHub", "Faeric.SleepyCheetahMsgHub\Faeric.SleepyCheetahMsgHub.csproj", "{05AEB50A-43B3-4058-A667-447FC7B85A1A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A3A532EA-69D7-4EFC-9939-7EBC886C2A04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05AEB50A-43B3-4058-A667-447FC7B85A1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05AEB50A-43B3-4058-A667-447FC7B85A1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05AEB50A-43B3-4058-A667-447FC7B85A1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05AEB50A-43B3-4058-A667-447FC7B85A1A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
