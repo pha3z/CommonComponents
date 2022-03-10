@@ -1,0 +1,124 @@
+﻿/*  
+	2022 March 8
+	This was originally created to store procedures (called routines here) in a database
+	with the intent of being able to visually program the routines and store them.
+	I ended up deciding to model all procedure data in an object graph that could be serialized and stored as a single record,
+	because the problem was very complex and the nuances made it just easier to model strictly as objects.
+	I kept this DDL in case I ever wanted to return to it.
+	*/
+
+-- DROP TABLE public.trigger_types;
+
+CREATE TABLE public.trigger_types (
+	id int4 NOT NULL,
+	ui_title_text text NOT NULL,
+	ui_tooltip text NOT NULL,
+	assigned_entity_variable_name text NULL,
+	additional_entity_variable_names text NULL,
+	additional_component_variable_names text NULL,
+	additional_variables_names text NULL,
+	CONSTRAINT trigger_types_pk PRIMARY KEY (id)
+);
+
+
+-- public.triggered_routine_action_types definition
+
+-- Drop table
+
+-- DROP TABLE public.triggered_routine_action_types;
+
+CREATE TABLE public.triggered_routine_action_types (
+	id int4 NOT NULL,
+	action_name text NOT NULL,
+	b_usage_is_restricted_by_trigger_type int4 NULL,
+	CONSTRAINT triggered_action_types_pk PRIMARY KEY (id)
+);
+
+
+-- public.triggered_routine_condition_types definition
+
+-- Drop table
+
+-- DROP TABLE public.triggered_routine_condition_types;
+
+CREATE TABLE public.triggered_routine_condition_types (
+	id int4 NOT NULL,
+	condition_name text NOT NULL,
+	variables text NULL,
+	template_text text NULL,
+	b_usage_is_restricted_by_trigger_type int4 NULL,
+	CONSTRAINT triggered_action_condition_types_pk PRIMARY KEY (id)
+);
+
+
+
+-- public.triggered_routines definition
+
+-- Drop table
+
+-- DROP TABLE public.triggered_routines;
+
+CREATE TABLE public.triggered_routines (
+	id int8 NOT NULL,
+	global_snapshot int4 NOT NULL,
+	assigned_entity int8 NOT NULL,
+	trigger_type int4 NOT NULL,
+	enable_after_zone_event int8 NULL,
+	enable_after_game_event int8 NULL,
+	disable_after_zone_event int8 NULL,
+	disable_after_game_event int8 NULL,
+	repeat int4 NOT NULL,
+	CONSTRAINT triggered_editor_routines_pk PRIMARY KEY (id, global_snapshot),
+	CONSTRAINT triggered_routines_assigned_entity_fk FOREIGN KEY (assigned_entity,global_snapshot) REFERENCES public.entities(id,global_snapshot) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT triggered_routines_trigger_type_fk FOREIGN KEY (trigger_type) REFERENCES public.trigger_types(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+-- DROP TABLE public.triggered_routine_actions;
+
+CREATE TABLE public.triggered_routine_actions (
+	id int8 NOT NULL,
+	global_snapshot int4 NOT NULL,
+	action_type int4 NOT NULL,
+	assigned_routine int8 NOT NULL,
+	execution_order int4 NOT NULL,
+	CONSTRAINT triggered_editor_routine_actions_pk PRIMARY KEY (id, global_snapshot),
+	CONSTRAINT triggered_editor_routine_actions_action_type_fk FOREIGN KEY (action_type) REFERENCES public.triggered_routine_action_types(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT triggered_editor_routine_actions_assigned_routine_fk FOREIGN KEY (assigned_routine,global_snapshot) REFERENCES public.triggered_routines(id,global_snapshot) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+-- public.triggered_routine_condition_groups definition
+
+-- Drop table
+
+-- DROP TABLE public.triggered_routine_condition_groups;
+
+CREATE TABLE public.triggered_routine_condition_groups (
+	id int8 NOT NULL,
+	global_snapshot int4 NOT NULL,
+	logical_op int4 NOT NULL,
+	assigned_routine int8 NOT NULL,
+	sort_order int4 NOT NULL,
+	CONSTRAINT triggered_routine_condition_groups_pk PRIMARY KEY (id, global_snapshot),
+	CONSTRAINT triggered_routine_condition_groups_assigned_routine_fk FOREIGN KEY (assigned_routine,global_snapshot) REFERENCES public.triggered_routines(id,global_snapshot) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+-- public.triggered_routine_conditions definition
+
+-- Drop table
+
+-- DROP TABLE public.triggered_routine_conditions;
+
+CREATE TABLE public.triggered_routine_conditions (
+	id int8 NOT NULL,
+	global_snapshot int4 NOT NULL,
+	condition_type int4 NOT NULL,
+	assigned_condition_group int8 NOT NULL,
+	sort_order int4 NOT NULL,
+	logical_op int4 NOT NULL,
+	CONSTRAINT triggered_editor_routine_conditions_pk PRIMARY KEY (id, global_snapshot),
+	CONSTRAINT triggered_editor_routine_conditions_condition_type_fk FOREIGN KEY (condition_type) REFERENCES public.triggered_routine_condition_types(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT triggered_routine_conditions_fk FOREIGN KEY (assigned_condition_group,global_snapshot) REFERENCES public.triggered_routine_condition_groups(id,global_snapshot) ON DELETE CASCADE ON UPDATE CASCADE
+);
