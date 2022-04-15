@@ -6,6 +6,7 @@ using System.Text;
 
 namespace Faeric.HighPerformanceDataStructures
 {
+    /*
     /// <summary>
     /// https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/UntypedList.cs
     /// </summary>
@@ -141,5 +142,5 @@ namespace Faeric.HighPerformanceDataStructures
             return byteIndex;
         }
 
-    }
+    }*/
 }

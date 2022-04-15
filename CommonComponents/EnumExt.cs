@@ -17,7 +17,7 @@ namespace Common
         /// <typeparam name="T"></typeparam>
         /// <param name="values"></param>
         /// <returns></returns>
-        public static T ToFlagsEnum<T>(this IEnumerable<T> values) where T : struct, IConvertible
+        public static T ToFlagsEnum<T>(IEnumerable<T> values) where T : struct, IConvertible
         {
             if (!typeof(T).IsEnum)
                 throw new ArgumentException("T must be an enumerated type.");
@@ -39,7 +39,7 @@ namespace Common
         /// <typeparam name="T"></typeparam>
         /// <param name="flags"></param>
         /// <returns></returns>
-        public static IEnumerable<T> ToFlagsCollection<T>(this T flags) where T : struct, IConvertible
+        public static IEnumerable<T> ToFlagsCollection<T>(T flags) where T : struct, IConvertible
         {
             if (!typeof(T).IsEnum)
                 throw new ArgumentException("T must be an enumerated type.");
@@ -52,6 +52,23 @@ namespace Common
                 {
                     yield return value;
                 }
+            }
+        }
+
+
+
+        public static IEnumerable<NameAndValue<T>> GetNamesAndValues<T>()
+        {
+            if (!typeof(T).IsEnum)
+                throw new ArgumentException("T must be an enumerated type.");
+
+            T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+
+            int i = 0;
+            foreach(string n in Enum.GetNames(typeof(T)))
+            {
+                yield return new NameAndValue<T>(n, values[i]);
+                i++;
             }
         }
     }
