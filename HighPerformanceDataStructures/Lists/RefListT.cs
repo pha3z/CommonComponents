@@ -14,13 +14,8 @@ namespace Faeric.HighPerformanceDataStructures
     /// <br/><br/>However, items are added strictly with AddByRef(), which eliminates unnecessary copies. This is useful for storing structs significantly larger than 4 bytes. There is still a 'ref' copy cost, which equates to a 4 byte (or 8-byte in 64-bit mode) copy anyway. So if your structs are less than 9 to 16 bytes and/or you want value-copy semantics, you may not want to use this data structure.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RefList<T> : ISortedRefList<T>
+    public class RefList<T> : RefList, ISortedRefList<T>
     {
-        public int Count { get => _count; set => _count = value; }
-        protected int _count;
-
-        public void Clear() => _count = 0;
-
         bool _useConsumerDefaultValue;
 
         /// <summary>
