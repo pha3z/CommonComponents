@@ -1,20 +1,27 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Faeric.HighPerformanceDataStructures.Lists
+namespace Faeric.HighPerformanceDataStructures
 {
-    public delegate bool RefPredicate<T>(ref T item);
-    public delegate bool RefGreaterThan<T>(ref T item1, ref T item2);
 
     /// <summary>
     /// Like FastList but for ValueTypes managed BY REF. Do NOT use this with Reference types -- use FastList for that purpose.
     /// <br/><br/>However, items are added strictly with AddByRef(), which eliminates unnecessary copies. This is useful for storing structs significantly larger than 4 bytes. There is still a 'ref' copy cost, which equates to a 4 byte (or 8-byte in 64-bit mode) copy anyway. So if your structs are less than 9 to 16 bytes and/or you want value-copy semantics, you may not want to use this data structure.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RefList<T>
+    public class RefList<T> : ISortedRefList<T>
     {
-        readonly bool DefaultInitialize;
+        public int Count { get => _count; set => _count = value; }
+        protected int _count;
+
+        public void Clear() => _count = 0;
+
+        bool _useConsumerDefaultValue;
 
         /// <summary>
         /// Use Caution when mutating the Items array directly.
@@ -28,26 +35,18 @@ namespace Faeric.HighPerformanceDataStructures.Lists
 
         public ref T Last => ref _items[_count - 1];
 
-        private readonly T _defaultValue;
-
-        public int Count { get => _count; set => _count = value; }
-        protected int _count;
-
-        public void Clear() => _count = 0;
+        T _defaultValue;
 
         /// <summary>Adds an item without checking capacity first. Will throw Array Out-of-Bounds exception if there is no space left at the end of the internal array.</summary>
         public ref T AddByRef_Unsafe() => ref _items[_count++];
 
         /// <summary>Same as AddByRef_Unsafe() except that the capacity will be checked before an item is added. Capacity will be doubled if more space is needed.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public ref T AddByRef()
         {
-            if (_count++ != _items.Length)
-            {
-                return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_items), _count);
-            }
+            if (_items.Length == _count)
+                IncreaseCapacity(_items.Length * 2);
 
-            return ref ResizeRef();
+            return ref _items[_count++];
         }
 
         /// <summary>
@@ -75,68 +74,35 @@ namespace Faeric.HighPerformanceDataStructures.Lists
             Array.Copy(newItems, start, _items, _count, length);
             _count = _count + (length - start);
         }
-        
+
+        /// <summary>Makes sure array size is at least capacity. If not, size is increased to exactly capacity.</summary>
+        public void EnsureCapacityMatch(int capacity)
+        {
+            if (_items.Length < capacity)
+                IncreaseCapacity(capacity);
+        }
 
         /// <summary>Makes sure there are at least a number of overhead slots remaining. If not, increases capacity to (Count + overhead)</summary>
         /// <param name="capacity"></param>
         public void EnsureCapacityOverhead(int overhead)
-            => EnsureCapacity(_count + overhead);
+            => EnsureCapacityMatch(_count + overhead);
 
-        /// <summary>Makes sure array size is at least capacity. If not, size is increased to exactly capacity.</summary>
-        public void EnsureCapacity(int ExpectedCapacity)
+        void IncreaseCapacity(int newCapacity)
         {
-            if (ExpectedCapacity <= _items.Length)
-            {
-                return;
-            }
+            int oldLength = _items.Length;
+            var newArray = new T[newCapacity];
+            Array.Copy(_items, newArray, oldLength);
+            _items = newArray; //Let GC handle the old items array
 
-            ResizeTo(ExpectedCapacity);
+            if(_useConsumerDefaultValue)
+                FillDefaultValues(oldLength);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private T[] ResizeTo(int NewSize)
+        private RefList() { }
+
+        public RefList(int capacity)
         {
-            var OldArr = _items;
-
-            _items = GC.AllocateUninitializedArray<T>(NewSize);
-            
-            OldArr.AsSpan().CopyTo(_items);
-
-            if (DefaultInitialize)
-            {
-                _items.AsSpan(OldArr.Length).Fill(_defaultValue);
-            }
-
-            return _items;
-        }
-        
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private ref T ResizeRef()
-        {
-            var OldLength = _items.Length;
-
-            return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(ResizeTo(OldLength * 2)), OldLength);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void ResizeAdd(T Item)
-        {
-            ResizeRef() = Item;
-        }
-
-        // private RefList() { }
-
-        public RefList(int capacity, bool defaultInitialize = false, T defaultValue = default)
-        {
-            _items = GC.AllocateUninitializedArray<T>(capacity);
-
-            DefaultInitialize = defaultInitialize;
-            _defaultValue = defaultValue;
-            
-            if (DefaultInitialize)
-            {
-                _items.AsSpan().Fill(_defaultValue);
-            }
+            _items = new T[capacity];
         }
 
         /// <summary>
@@ -145,160 +111,99 @@ namespace Faeric.HighPerformanceDataStructures.Lists
         /// </summary>
         /// <param name="capacity"></param>
         /// <param name="defaultValue">The default value will be copied into all array slots when underlying array is initialized. It is also copied into new slots when the underlying array is copied (due to a capacity increase).</param>
-        // public RefList(int capacity, T defaultValue)
-        // {
-        //     _defaultValue = defaultValue;
-        //     DefaultInitialize = true;
-        //     _items = new T[capacity];
-        //     FillDefaultValues(0);
-        // }
-
-        public interface IGreaterThan
+        public RefList(int capacity, T defaultValue )
         {
-            //Left is greater than right
-            public bool LeftIsGreaterThanRight(ref T Left, ref T Right);
-        }
-        
-        private readonly struct GreaterThanDelWrapper: IGreaterThan
-        {
-            private readonly RefGreaterThan<T> Del;
-
-            public GreaterThanDelWrapper(RefGreaterThan<T> del)
-            {
-                Del = del;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-            public bool LeftIsGreaterThanRight(ref T Left, ref T Right)
-            {
-                return Del(ref Left, ref Right);
-            }
+            _defaultValue = defaultValue;
+            _useConsumerDefaultValue = true;
+            _items = new T[capacity];
+            FillDefaultValues(0);
         }
 
         /// <summary>Assumes list is already ordered according to the given refGreaterThanTest. Finds the correct position for new item and inserts it. Avg time: O(n/2)</summary>
         /// <param name="item"></param>
         /// <param name="refGreaterThanTest"></param>
         /// <returns>The index where the item was added.</returns>
-        public ref T AddInOrderedPosition<GreaterThanT>(T item, GreaterThanT refGreaterThanTest)
-            where GreaterThanT : IGreaterThan
+        public int AddInOrderedPosition(ref T item, RefGreaterThan<T> refGreaterThanTest)
         {
-            var OldCount = Count++;
-            
-            EnsureCapacity(Count);
-            
-            ref var Current = ref MemoryMarshal.GetArrayDataReference(_items);
+            if (Count > _items.Length)
+                IncreaseCapacity(Count * 1);
 
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, OldCount);
+            return AddInOrderedPosition_Unsafe(ref item, refGreaterThanTest);
+        }
 
-            ref var Last = ref Unsafe.Subtract(ref LastOffsetByOne, 1);
-
-            //Is new item greater than all items?
-            if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref Last))
+        /// <summary>Assumes list is already ordered according to the given refGreaterThanTest. Finds the correct position for new item and inserts it. Avg time: O(n/2)</summary>
+        /// <param name="item"></param>
+        /// <param name="refGreaterThanTest"></param>
+        /// <returns>The index where the item was added.</returns>
+        public int AddInOrderedPosition_Unsafe(ref T item, RefGreaterThan<T> refGreaterThanTest)
+        {
+            int i = 0;
+            for (; i < Count; i++)
             {
-                //The JIT should invert the branch, making this uncommon
-                //This allows the common branch to avoid a jmp, and help with
-                //branch prediction
-                goto InsertLast;
-            }
-            
-            for (; !Unsafe.AreSame(ref Current, ref Last); Current = ref Unsafe.Add(ref Current, 1))
-            {
-                if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref Current))
+                if(refGreaterThanTest(ref _items[i], ref item))
                 {
-                    continue;
+                    //Open a hole by shifting everything to the right
+                    _count++;
+                    for (int j = Count - 1; j > i; j--)
+                        _items[j] = _items[j - 1];
+
+                    _items[i] = item;
+                    break;
                 }
-
-                break;
             }
-            
-            //[0, 1, 2]
-            var MoveCount = (int) Unsafe.ByteOffset(ref Current, ref LastOffsetByOne) / Unsafe.SizeOf<T>();
 
-            var Origin = MemoryMarshal.CreateSpan(ref Current, MoveCount);
+            if(i == Count)
+            {
+                //New item is greater than all items. Insert at end.
+                _items[_count] = item;
+                _count++;
+            }
 
-            var Destination = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref Current, 1), MoveCount);
-                
-            Origin.CopyTo(Destination);
-            
-            Current = item;
-
-            return ref Current;
-            
-            InsertLast:
-            LastOffsetByOne = item;
-
-            return ref LastOffsetByOne;
+            return i;
         }
 
 
         /// <summary>If current capacity exceeds max capacity, the internal array will be replaced by a new one with maxCapacity.
         /// <br/><br/>Count is also decreased if it exceeds max capacity. Creates garbage.</summary>
         /// <returns>True if internal array was larger than max capacity -- a trim occurred. Else false</returns>
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public bool TrimExcess(int maxCapacity)
         {
-            var OldArr = _items;
-            
-            if (maxCapacity < OldArr.Length)
+            if (maxCapacity < _items.Length)
             {
-                _count = maxCapacity;
-
-                _items = GC.AllocateUninitializedArray<T>(maxCapacity);
-                
-                OldArr.AsSpan(0, maxCapacity).CopyTo(_items);
-                
-                //Note that we don't have to zero anything, since we are trimming
+                _items = new T[maxCapacity];
+                if (_count > maxCapacity)
+                    _count = maxCapacity;
+                return true;
             }
 
             return false;
         }
 
         /// <summary>Decrements Count. That's it.</summary>
-        public void UnsafeRemoveLast() => _count--;
+        public void RemoveLast() => _count--;
         /// <summary>Reduces Count by n. That's it.</summary>
-        public void UnsafeRemoveLastN(int n) => _count -= n;
+        public void RemoveLastN(int n) => _count -= n;
 
-        public void UnsafeRemoveFirstN(int n)
+        public void RemoveFirstN(int n)
         {
-            var Arr = _items;
-
-            //[0, 1, 2]
-            var IndexOfMoveStart = n;
-            
-            var MoveCount = _count - IndexOfMoveStart;
-
-            Arr.AsSpan(IndexOfMoveStart, MoveCount).CopyTo(Arr.AsSpan());
-
+            Array.Copy(_items, n, _items, 0, _count - n);
             _count -= n;
         }
 
         /// <summary>Removes by copying last element to index position. Does not retain order.</summary>
-        public void UnsafeRemoveBySwap(int idx)
+        public void RemoveBySwap(int idx)
         {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
+            if (idx < _count - 1)
+                _items[idx] = _items[Count - 1];
 
-            ref var Removed = ref Unsafe.Add(ref First, idx);
-            
-            var Last = Unsafe.Add(ref First, --_count);
-
-            Removed = Last;
+            _count--;
         }
 
-        public void UnsafeRemove_RetainingOrder(int idx)
+        public void Remove_RetainingOrder(int idx)
         {
-            var NewCount = --_count;
-            
-            if (NewCount != idx)
-            {
-                //[0, 1, 2]
-                var MoveCount = NewCount - idx;
-
-                var Origin = _items.AsSpan(idx + 1, MoveCount);
-
-                var Destination = _items.AsSpan(idx, MoveCount);
-                
-                Origin.CopyTo(Destination);
-            }
+            if (idx < _count - 1)
+                Array.Copy(_items, idx + 1, _items, idx, _count - idx - 1);
+            _count--;
         }
 
         /// <summary>
@@ -306,56 +211,16 @@ namespace Faeric.HighPerformanceDataStructures.Lists
         /// </summary>
         /// <param name="predicate"></param>
         /// <returns>The index of the removed match or -1 if no match was found</returns> 
-        public int UnsafeRemoveFirstMatch(RefPredicate<T> predicate)
+        public int RemoveFirstMatch(RefPredicate<T> predicate)
         {
-            return UnsafeRemoveFirstMatch(new RefPredicateDelWrapper(predicate));
-        }
-        
-        public interface IRefPredicate
-        {
-            public bool Match(ref T Item);
-        }
-        
-        private readonly struct RefPredicateDelWrapper: IRefPredicate
-        {
-            private readonly RefPredicate<T> Del;
-
-            public RefPredicateDelWrapper(RefPredicate<T> del)
+            for (int i = 0; i < _count; i++)
             {
-                Del = del;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-            public bool Match(ref T Item)
-            {
-                return Del(ref Item);
-            }
-        }
-        
-        /// <summary>
-        /// Removes the first matching element by copying the last element to the matched position.
-        /// </summary>
-        /// <param name="predicate"></param>
-        /// <returns>The index of the removed match or -1 if no match was found</returns> 
-        public int UnsafeRemoveFirstMatch<PredicateT>(PredicateT predicate)
-            where PredicateT: IRefPredicate
-        {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
-
-            ref var Current = ref First;
-            
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, Count--);
-
-            for (; !Unsafe.AreSame(ref Current, ref LastOffsetByOne); Current = ref Unsafe.Add(ref Current, 1))
-            {
-                if (!predicate.Match(ref Current))
+                if (predicate(ref _items[i]))
                 {
-                    continue;
+                    _items[i] = _items[Count - 1];
+                    _count--;
+                    return i;
                 }
-
-                Current = Unsafe.Subtract(ref LastOffsetByOne, 1);
-
-                return (int) Unsafe.ByteOffset(ref First, ref Current) / Unsafe.SizeOf<T>();
             }
 
             return -1;
@@ -366,32 +231,16 @@ namespace Faeric.HighPerformanceDataStructures.Lists
         /// </summary>
         /// <param name="predicate"></param>
         /// <returns>The index of the removed match or -1 if no match was found</returns>
-        public int UnsafeRemoveFirstMatch_RetainingOrder(RefPredicate<T> predicate)
+        public int RemoveFirstMatch_RetainingOrder(RefPredicate<T> predicate)
         {
-            return UnsafeRemoveFirstMatch_RetainingOrder(new RefPredicateDelWrapper(predicate));
-        }
-        
-        public int UnsafeRemoveFirstMatch_RetainingOrder<PredicateT>(PredicateT predicate)
-            where PredicateT: IRefPredicate
-        {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
-
-            ref var Current = ref First;
-            
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, Count--);
-
-            for (; !Unsafe.AreSame(ref Current, ref LastOffsetByOne); Current = ref Unsafe.Add(ref Current, 1))
+            for (int i = 0; i < _count; i++)
             {
-                if (!predicate.Match(ref Current))
+                if (predicate(ref _items[i]))
                 {
-                    continue;
+                    Array.Copy(_items, i + 1, _items, i, _items.Length - i - 1);
+                    _count--;
+                    return i;
                 }
-
-                var IndexOfRemoved = (int) Unsafe.ByteOffset(ref First, ref Current) / Unsafe.SizeOf<T>();
-
-                UnsafeRemove_RetainingOrder(IndexOfRemoved);
-                
-                return IndexOfRemoved;
             }
 
             return -1;
@@ -419,7 +268,7 @@ namespace Faeric.HighPerformanceDataStructures.Lists
             return false;
         }
 
-
+        
         /// <summary>Avg Time: O(n log(n)). Worst: O(n^2).   Operates directly on the underlying array.  Java considers it to be the fastest option for 47 to 285 items. </summary>
         /// <param name="comparer"></param>
         public void QuickSort(RefGreaterThan<T> comparer)
@@ -440,7 +289,7 @@ namespace Faeric.HighPerformanceDataStructures.Lists
 
                 // Move elements of arr[0..i-1] that are greater than key
                 // to one position ahead of their current position
-                while (j > -1 && greaterThan(ref _items[j], ref key))
+                while (j > -1 &&  greaterThan(ref _items[j], ref key))
                 {
                     _items[j + 1] = _items[j];
                     j--;
@@ -449,23 +298,19 @@ namespace Faeric.HighPerformanceDataStructures.Lists
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public RefList<T> DeepCopy()
         {
-            var newList = new RefList<T>(Capacity, DefaultInitialize, _defaultValue)
-            {
-                _count = _count
-            };
+            var newList = new RefList<T>(Capacity);
+            newList._count = _count;
 
-            _items.AsSpan(0, _count).CopyTo(newList._items);
-            
+            Array.Copy(_items, newList._items, _count);
             return newList;
         }
 
-        // void FillDefaultValues(int start)
-        // {
-        //     for (int i = start; i < _items.Length; i++)
-        //         _items[i] = _defaultValue;
-        // }
+        void FillDefaultValues(int start)
+        {
+            for (int i = start; i < _items.Length; i++)
+                _items[i] = _defaultValue;
+        }
     }
 }
