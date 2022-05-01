@@ -14,7 +14,7 @@ namespace Faeric.HighPerformanceDataStructures
     /// <typeparam name="T"></typeparam>
     public class RefList<T>
     {
-        readonly bool DefaultInitialize;
+        readonly bool _defaultInitialize;
 
         /// <summary>
         /// Use Caution when mutating the Items array directly.
@@ -94,17 +94,17 @@ namespace Faeric.HighPerformanceDataStructures
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private T[] ResizeTo(int NewSize)
+        private T[] ResizeTo(int newSize)
         {
-            var OldArr = _items;
+            var oldArr = _items;
 
-            _items = GC.AllocateUninitializedArray<T>(NewSize);
+            _items = GC.AllocateUninitializedArray<T>(newSize);
             
-            OldArr.AsSpan().CopyTo(_items);
+            oldArr.AsSpan().CopyTo(_items);
 
-            if (DefaultInitialize)
+            if (_defaultInitialize)
             {
-                _items.AsSpan(OldArr.Length).Fill(_defaultValue);
+                _items.AsSpan(oldArr.Length).Fill(_defaultValue);
             }
 
             return _items;
@@ -113,9 +113,9 @@ namespace Faeric.HighPerformanceDataStructures
         [MethodImpl(MethodImplOptions.NoInlining)]
         private ref T ResizeRef()
         {
-            var OldLength = _items.Length;
+            var oldLen = _items.Length;
 
-            return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(ResizeTo(OldLength * 2)), OldLength);
+            return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(ResizeTo(oldLen * 2)), oldLen);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -130,10 +130,10 @@ namespace Faeric.HighPerformanceDataStructures
         {
             _items = GC.AllocateUninitializedArray<T>(capacity);
 
-            DefaultInitialize = defaultInitialize;
+            _defaultInitialize = defaultInitialize;
             _defaultValue = defaultValue;
             
-            if (DefaultInitialize)
+            if (_defaultInitialize)
             {
                 _items.AsSpan().Fill(_defaultValue);
             }
@@ -169,9 +169,9 @@ namespace Faeric.HighPerformanceDataStructures
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-            public bool LeftIsGreaterThanRight(ref T Left, ref T Right)
+            public bool LeftIsGreaterThanRight(ref T left, ref T right)
             {
-                return Del(ref Left, ref Right);
+                return Del(ref left, ref right);
             }
         }
 
@@ -182,18 +182,18 @@ namespace Faeric.HighPerformanceDataStructures
         public ref T AddInOrderedPosition<GreaterThanT>(T item, GreaterThanT refGreaterThanTest)
             where GreaterThanT : IGreaterThan
         {
-            var OldCount = Count++;
+            var oldCount = Count++;
             
             EnsureCapacity(Count);
             
-            ref var Current = ref MemoryMarshal.GetArrayDataReference(_items);
+            ref var current = ref MemoryMarshal.GetArrayDataReference(_items);
 
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, OldCount);
+            ref var lastOffsetByOne = ref Unsafe.Add(ref current, oldCount);
 
-            ref var Last = ref Unsafe.Subtract(ref LastOffsetByOne, 1);
+            ref var last = ref Unsafe.Subtract(ref lastOffsetByOne, 1);
 
             //Is new item greater than all items?
-            if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref Last))
+            if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref last))
             {
                 //The JIT should invert the branch, making this uncommon
                 //This allows the common branch to avoid a jmp, and help with
@@ -201,9 +201,9 @@ namespace Faeric.HighPerformanceDataStructures
                 goto InsertLast;
             }
             
-            for (; !Unsafe.AreSame(ref Current, ref Last); Current = ref Unsafe.Add(ref Current, 1))
+            for (; !Unsafe.AreSame(ref current, ref last); current = ref Unsafe.Add(ref current, 1))
             {
-                if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref Current))
+                if (refGreaterThanTest.LeftIsGreaterThanRight(ref item, ref current))
                 {
                     continue;
                 }
@@ -212,22 +212,22 @@ namespace Faeric.HighPerformanceDataStructures
             }
             
             //[0, 1, 2]
-            var MoveCount = (int) Unsafe.ByteOffset(ref Current, ref LastOffsetByOne) / Unsafe.SizeOf<T>();
+            var moveCount = (int) Unsafe.ByteOffset(ref current, ref lastOffsetByOne) / Unsafe.SizeOf<T>();
 
-            var Origin = MemoryMarshal.CreateSpan(ref Current, MoveCount);
+            var origin = MemoryMarshal.CreateSpan(ref current, moveCount);
 
-            var Destination = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref Current, 1), MoveCount);
+            var destination = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref current, 1), moveCount);
                 
-            Origin.CopyTo(Destination);
+            origin.CopyTo(destination);
             
-            Current = item;
+            current = item;
 
-            return ref Current;
+            return ref current;
             
             InsertLast:
-            LastOffsetByOne = item;
+            lastOffsetByOne = item;
 
-            return ref LastOffsetByOne;
+            return ref lastOffsetByOne;
         }
 
 
@@ -237,15 +237,15 @@ namespace Faeric.HighPerformanceDataStructures
         [MethodImpl(MethodImplOptions.NoInlining)]
         public bool TrimExcess(int maxCapacity)
         {
-            var OldArr = _items;
+            var oldArr = _items;
             
-            if (maxCapacity < OldArr.Length)
+            if (maxCapacity < oldArr.Length)
             {
                 _count = maxCapacity;
 
                 _items = GC.AllocateUninitializedArray<T>(maxCapacity);
                 
-                OldArr.AsSpan(0, maxCapacity).CopyTo(_items);
+                oldArr.AsSpan(0, maxCapacity).CopyTo(_items);
                 
                 //Note that we don't have to zero anything, since we are trimming
             }
@@ -260,14 +260,14 @@ namespace Faeric.HighPerformanceDataStructures
 
         public void UnsafeRemoveFirstN(int n)
         {
-            var Arr = _items;
+            var arr = _items;
 
             //[0, 1, 2]
-            var IndexOfMoveStart = n;
+            var indexOfMoveStart = n;
             
-            var MoveCount = _count - IndexOfMoveStart;
+            var moveCount = _count - indexOfMoveStart;
 
-            Arr.AsSpan(IndexOfMoveStart, MoveCount).CopyTo(Arr.AsSpan());
+            arr.AsSpan(indexOfMoveStart, moveCount).CopyTo(arr.AsSpan());
 
             _count -= n;
         }
@@ -275,29 +275,29 @@ namespace Faeric.HighPerformanceDataStructures
         /// <summary>Removes by copying last element to index position. Does not retain order.</summary>
         public void UnsafeRemoveBySwap(int idx)
         {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
+            ref var first = ref MemoryMarshal.GetArrayDataReference(_items);
 
-            ref var Removed = ref Unsafe.Add(ref First, idx);
+            ref var removed = ref Unsafe.Add(ref first, idx);
             
-            var Last = Unsafe.Add(ref First, --_count);
+            var last = Unsafe.Add(ref first, --_count);
 
-            Removed = Last;
+            removed = last;
         }
 
         public void UnsafeRemove_RetainingOrder(int idx)
         {
-            var NewCount = --_count;
+            var newCount = --_count;
             
-            if (NewCount != idx)
+            if (newCount != idx)
             {
                 //[0, 1, 2]
-                var MoveCount = NewCount - idx;
+                var moveCount = newCount - idx;
 
-                var Origin = _items.AsSpan(idx + 1, MoveCount);
+                var origin = _items.AsSpan(idx + 1, moveCount);
 
-                var Destination = _items.AsSpan(idx, MoveCount);
+                var dest = _items.AsSpan(idx, moveCount);
                 
-                Origin.CopyTo(Destination);
+                origin.CopyTo(dest);
             }
         }
 
@@ -340,22 +340,22 @@ namespace Faeric.HighPerformanceDataStructures
         public int UnsafeRemoveFirstMatch<PredicateT>(PredicateT predicate)
             where PredicateT: IRefPredicate
         {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
+            ref var first = ref MemoryMarshal.GetArrayDataReference(_items);
 
-            ref var Current = ref First;
+            ref var current = ref first;
             
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, Count--);
+            ref var lastOffsetByOne = ref Unsafe.Add(ref current, Count--);
 
-            for (; !Unsafe.AreSame(ref Current, ref LastOffsetByOne); Current = ref Unsafe.Add(ref Current, 1))
+            for (; !Unsafe.AreSame(ref current, ref lastOffsetByOne); current = ref Unsafe.Add(ref current, 1))
             {
-                if (!predicate.Match(ref Current))
+                if (!predicate.Match(ref current))
                 {
                     continue;
                 }
 
-                Current = Unsafe.Subtract(ref LastOffsetByOne, 1);
+                current = Unsafe.Subtract(ref lastOffsetByOne, 1);
 
-                return (int) Unsafe.ByteOffset(ref First, ref Current) / Unsafe.SizeOf<T>();
+                return (int) Unsafe.ByteOffset(ref first, ref current) / Unsafe.SizeOf<T>();
             }
 
             return -1;
@@ -374,24 +374,24 @@ namespace Faeric.HighPerformanceDataStructures
         public int UnsafeRemoveFirstMatch_RetainingOrder<PredicateT>(PredicateT predicate)
             where PredicateT: IRefPredicate
         {
-            ref var First = ref MemoryMarshal.GetArrayDataReference(_items);
+            ref var first = ref MemoryMarshal.GetArrayDataReference(_items);
 
-            ref var Current = ref First;
+            ref var current = ref first;
             
-            ref var LastOffsetByOne = ref Unsafe.Add(ref Current, Count--);
+            ref var lastOffsetByOne = ref Unsafe.Add(ref current, Count--);
 
-            for (; !Unsafe.AreSame(ref Current, ref LastOffsetByOne); Current = ref Unsafe.Add(ref Current, 1))
+            for (; !Unsafe.AreSame(ref current, ref lastOffsetByOne); current = ref Unsafe.Add(ref current, 1))
             {
-                if (!predicate.Match(ref Current))
+                if (!predicate.Match(ref current))
                 {
                     continue;
                 }
 
-                var IndexOfRemoved = (int) Unsafe.ByteOffset(ref First, ref Current) / Unsafe.SizeOf<T>();
+                var indexOfRemoved = (int) Unsafe.ByteOffset(ref first, ref current) / Unsafe.SizeOf<T>();
 
-                UnsafeRemove_RetainingOrder(IndexOfRemoved);
+                UnsafeRemove_RetainingOrder(indexOfRemoved);
                 
-                return IndexOfRemoved;
+                return indexOfRemoved;
             }
 
             return -1;
@@ -452,7 +452,7 @@ namespace Faeric.HighPerformanceDataStructures
         [MethodImpl(MethodImplOptions.NoInlining)]
         public RefList<T> DeepCopy()
         {
-            var newList = new RefList<T>(Capacity, DefaultInitialize, _defaultValue)
+            var newList = new RefList<T>(Capacity, _defaultInitialize, _defaultValue)
             {
                 _count = _count
             };
