@@ -1,11 +1,14 @@
 ﻿using Faeric.HighPerformanceDataStructures;
-using Faeric.Redzen.Sorting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Faeric.HighPerformanceDataStructures
 {
+    //I think this tree turned out to be not very useful in the real world because there are too many constraints on it
+    //making practical usage difficult.
+    //If you need a sorted tree, I guess it could be resurrected.
+
     /// <summary>
     /// When items are created in this tree, they are always created at an index greater than their parent,
     /// ensuring the tree is always ordered in the underlying array such that a child can never occur before its parent.
@@ -20,6 +23,7 @@ namespace Faeric.HighPerformanceDataStructures
     /// with a traditional tree that works on reference type nodes.
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    /*
     public class AncesterallySortedBinaryTree<T>
         where T : struct
     {
@@ -90,23 +94,23 @@ namespace Faeric.HighPerformanceDataStructures
             _ = ref _nodes.AddByRef_Unsafe();
         }
 
-        /*
+        
         public short CreateLeftChild(short parent)
         {
             short i = GrabAnyHole();
             _nodes[i] = new BinaryNode<T>(parent);
             _nodes[parent].Left = i;
             return i;
-        }*/
+        }
 
-        /*
+        
         public short CreateRightChild(short parent)
         {
             short i = GrabAnyHole();
             _nodes[i] = new BinaryNode<T>(parent);
             _nodes[parent].Right = i;
             return i;
-        }*/
+        }
 
         /// <summary>
         /// Inserts a lefthand child for the given parent. Guarantees the child is inserted somewhere after the parent in the underlying array.
@@ -204,7 +208,7 @@ namespace Faeric.HighPerformanceDataStructures
         /// Naively grabs a hole from the holes list regardless of its position in the tree array
         /// </summary>
         /// <returns></returns>
-        /*short GrabAnyHole()
+        short GrabAnyHole()
         {
             if(_holes.Count > 0)
             {
@@ -216,7 +220,7 @@ namespace Faeric.HighPerformanceDataStructures
             if(_nodes.Count == _nodes.Capacity)
                 _nodes.EnsureCapacityMatch(_nodes.Capacity * 2);
             return (short)(_nodes.Count);
-        }*/
+        }
 
         /// <summary>
         /// Grabs the next hole after parent. Can be used to ensure children are always inserted after parent
@@ -349,7 +353,7 @@ namespace Faeric.HighPerformanceDataStructures
             }
 
             return -1;
-        }
+        }*/
 
 
         /*
@@ -391,7 +395,7 @@ namespace Faeric.HighPerformanceDataStructures
                 return -1;
             else
                 return match;
-        }*/
+        }
 
-    }
+    }*/
 }

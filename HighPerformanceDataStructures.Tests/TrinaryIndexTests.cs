@@ -5,7 +5,6 @@ using System.Text;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 using static System.Console;
 
-
 namespace Faeric.HighPerformanceDataStructures.Tests
 {
 
@@ -15,7 +14,7 @@ namespace Faeric.HighPerformanceDataStructures.Tests
         void EmptySlotEraser(ref MyStruct s) => s.A = -1;
         bool EmptySlotTester(ref MyStruct s) => s.A < 0;
 
-        TrinaryIndex< MyStruct > CreateTestIndex()
+        TrinaryIndex<MyStruct> CreateTestIndex()
         {
             var index = new TrinaryIndex<MyStruct>(
                 initialCapacity: 2,
