@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Faeric.HighPerformanceDataStructures
+namespace Faeric.HighPerformanceDataStructures.Lists
 {
     public delegate bool RefPredicate<T>(ref T item);
     public delegate bool RefGreaterThan<T>(ref T item1, ref T item2);
