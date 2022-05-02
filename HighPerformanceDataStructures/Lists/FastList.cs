@@ -1,4 +1,4 @@
-﻿using System;
+﻿    using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -177,6 +177,12 @@ namespace Faeric.HighPerformanceDataStructures
             }
             return false;
         }
+
+        /// <summary>
+        /// Returns the last item and decrements the count so its no longer in the list.
+        /// </summary>
+        /// <returns></returns>
+        public T PopLast() { _count--; return _items[_count]; }
 
         public int RemoveLast() => _count--;
         public void RemoveLastN(int n) => _count -= n;
