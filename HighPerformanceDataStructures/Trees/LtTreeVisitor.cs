@@ -13,7 +13,7 @@ namespace Faeric.HighPerformanceDataStructures
     {
         LtTree<T> _tree;
         ActionRef<T> _fnPassRef;
-        Action<short> _fnPassIndex;
+        Action<LtTree<T>, short> _fnPassIndex;
 
         public LtTreeVisitor(LtTree<T> tree)
         {
@@ -28,7 +28,7 @@ namespace Faeric.HighPerformanceDataStructures
             VisitChildByRef(0, 0);
         }
 
-        public void VisitAll(Action<short> func)
+        public void VisitAll(Action<LtTree<T>, short> func)
         {
             _fnPassIndex = func;
             VisitChildByIndex(0, 0);
@@ -75,7 +75,7 @@ namespace Faeric.HighPerformanceDataStructures
         void VisitChildByIndex(short iNode, int depth)
         {
             ref var node = ref _tree.Nodes[iNode];
-            _fnPassIndex(iNode);
+            _fnPassIndex(_tree, iNode);
 
             depth = depth + 1;
 
