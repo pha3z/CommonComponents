@@ -37,7 +37,7 @@ namespace Faeric.Layout.HighPerformanceDataStructures
 
             depth = depth + 1;
 
-            //Render stack siblings
+            //Visit stack siblings
             short stackSib = node.StackSibling;
             while (stackSib != LtTree<T>.EMPTY_REF)
             {
@@ -45,13 +45,13 @@ namespace Faeric.Layout.HighPerformanceDataStructures
                 stackSib = _tree.Nodes[stackSib].StackSibling;
             }
 
-            //Render child
+            //Visit child
             if (node.Child != LtTree<T>.EMPTY_REF)
             {
                 VisitChild(node.Child, depth);
             }
 
-            //Render overlays
+            //Visit overlays
             short overlay = node.OverlaySibling;
             while (overlay != LtTree<T>.EMPTY_REF)
             {
