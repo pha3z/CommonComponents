@@ -12,28 +12,36 @@ namespace Faeric.Layout.HighPerformanceDataStructures
     public struct LtTreeVisitor<T> where T : struct
     {
         LtTree<T> _tree;
-        ActionRef<T> _fn;
+        ActionRef<T> _fnPassRef;
+        Action<short> _fnPassIndex;
 
         public LtTreeVisitor(LtTree<T> tree)
         {
             _tree = tree;
-            _fn = null;
+            _fnPassRef = null;
+            _fnPassIndex = null;
         }
 
         public void VisitAll(ActionRef<T> func)
         {
-            _fn = func;
-            VisitChild(0, 0);
+            _fnPassRef = func;
+            VisitChildByRef(0, 0);
+        }
+
+        public void VisitAll(Action<short> func)
+        {
+            _fnPassIndex = func;
+            VisitChildByIndex(0, 0);
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="depth">Only increases when recursing to a first child/param>
-        void VisitChild(short iNode, int depth)
+        void VisitChildByRef(short iNode, int depth)
         {
             ref var node = ref _tree.Nodes[iNode];
-            _fn(ref node.Value);
+            _fnPassRef(ref node.Value);
 
             depth = depth + 1;
 
@@ -41,21 +49,55 @@ namespace Faeric.Layout.HighPerformanceDataStructures
             short stackSib = node.StackSibling;
             while (stackSib != LtTree<T>.EMPTY_REF)
             {
-                VisitChild(stackSib, depth);
+                VisitChildByRef(stackSib, depth);
                 stackSib = _tree.Nodes[stackSib].StackSibling;
             }
 
             //Visit child
             if (node.Child != LtTree<T>.EMPTY_REF)
             {
-                VisitChild(node.Child, depth);
+                VisitChildByRef(node.Child, depth);
             }
 
             //Visit overlays
             short overlay = node.OverlaySibling;
             while (overlay != LtTree<T>.EMPTY_REF)
             {
-                VisitChild(overlay, depth);
+                VisitChildByRef(overlay, depth);
+                overlay = _tree.Nodes[overlay].OverlaySibling;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="depth">Only increases when recursing to a first child/param>
+        void VisitChildByIndex(short iNode, int depth)
+        {
+            ref var node = ref _tree.Nodes[iNode];
+            _fnPassIndex(iNode);
+
+            depth = depth + 1;
+
+            //Visit stack siblings
+            short stackSib = node.StackSibling;
+            while (stackSib != LtTree<T>.EMPTY_REF)
+            {
+                VisitChildByIndex(stackSib, depth);
+                stackSib = _tree.Nodes[stackSib].StackSibling;
+            }
+
+            //Visit child
+            if (node.Child != LtTree<T>.EMPTY_REF)
+            {
+                VisitChildByIndex(node.Child, depth);
+            }
+
+            //Visit overlays
+            short overlay = node.OverlaySibling;
+            while (overlay != LtTree<T>.EMPTY_REF)
+            {
+                VisitChildByIndex(overlay, depth);
                 overlay = _tree.Nodes[overlay].OverlaySibling;
             }
         }
