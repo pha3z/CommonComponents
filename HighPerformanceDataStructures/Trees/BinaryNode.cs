@@ -15,19 +15,6 @@ namespace Faeric.HighPerformanceDataStructures
         public short Right;
         public T Value;
 
-        //public List<ushort> Children; //This makes us deference to get children.
-                                      //This is undesirable, but possibly unavoidable.
-                                      //Unless we went to binary tree.
-                                      //It makes for a double memory jump to get to a child.. which would be bad in cases of just one child.
-                                      //In those cases, an ordinary reference would be better.
-                                      //
-                                      //Maybe we should just go to a regular class node tree implementation
-                                      //we can snag one from github
-                                      //Then we don't have to do any of this.
-                                      //Could we work with a binary implementation?
-                                      //That seems like it would make the logic more complicated
-                                      //But it would eliminate jumps to other data structures
-
         public BinaryNode(short parent, ref T value)
         {
             Parent = parent;
