@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Faeric.Layout.HighPerformanceDataStructures
+namespace Faeric.HighPerformanceDataStructures
 {
     public delegate void ActionRef<T>(ref T item);
 
