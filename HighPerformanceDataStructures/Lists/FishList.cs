@@ -48,7 +48,6 @@ namespace Faeric.HighPerformanceDataStructures
         /// This is NOT necessarily the newest (most recently added) item.</summary>
         int _rightBoundItem = -1;
         int _newestHole = -1;
-        int _leftBoundItem = -1;
 
         private FishList() { }
 
