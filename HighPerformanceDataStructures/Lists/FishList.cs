@@ -123,17 +123,6 @@ namespace Faeric.HighPerformanceDataStructures
             return true;
         }
 
-
-        public void AddRange(IEnumerable<T> newItems)
-        {
-            EnsureCapacityMinimum(newItems.Count() + Count);
-            foreach(T item in newItems)
-            {
-                int i = Count++;
-                _items[i] = item;
-            }
-        }
-
         /// <summary>
         /// Appends newItems to existing items in the internal array using Array.Copy.<br/>
         /// NOTE: This circumvents the internal holes stack. Any holes in the existing<br/>
