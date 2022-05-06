@@ -164,7 +164,6 @@ namespace Faeric.HighPerformanceDataStructures
         {
             Count = 0;
             _newestHole = -1;
-            _leftBoundItem = -1;
             _rightBoundItem = -1;
         }
 
@@ -241,6 +240,9 @@ namespace Faeric.HighPerformanceDataStructures
 
         public FishList<T> DeepCopy()
         {
+            throw new NotImplementedException();
+            //Flesh out this code
+
             var newList = new FishList<T>(Capacity);
             newList.Count = Count;
 
