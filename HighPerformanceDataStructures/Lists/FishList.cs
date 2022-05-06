@@ -43,6 +43,10 @@ namespace Faeric.HighPerformanceDataStructures
             set => _items[idx] = value;
         }
 
+
+        /// <summary>Returns a reference to the item at position. Note, if you're using this in a tight loop, it may be faster to get a reference to Items and work directly on that.</summary>
+        public ref T Ref(int idx) => ref _items[idx];
+
         /// <summary>
         /// If you imagine the slice of array containing items with array position 0 being the leftmost element, then this is the position of the rightmost item.
         /// This is NOT necessarily the newest (most recently added) item.</summary>
