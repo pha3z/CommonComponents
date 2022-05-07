@@ -10,16 +10,16 @@ namespace Faeric.HighPerformanceDataStructures
     /// A root node is automatically created. The root node should not be removed.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class LtTree<T>
+    public class LtTree_LegacyWithBuggyHoleList<T>
         where T : struct
     {
         public const short EMPTY_REF = -1;
 
         /// <summary>May contain holes. If you want to iterate this, check each node to see if its a hole.</summary>
-        public FishList<LtNode<T>> Nodes;
+        public LtNode<T>[] Nodes;
+        FastList<short> _holes;
 
-        /// <summary>A direct reference to Nodes.Items. To eliminate extra indirection. Might not actually matter in practice. Not benchmarked.</summary>
-        LtNode<T>[] _items;
+        public short NodeCount => (short)(Nodes.Length - _holes.Count);
 
         T _defaultValue;
 
@@ -28,34 +28,29 @@ namespace Faeric.HighPerformanceDataStructures
         /// </summary>
         /// <param name="capacity"></param>
         /// <param name="defaultValue">The initial array will be filled with this value. If the array capacity changes, new empty values will also be filled with this value.</param>
-        public LtTree(int capacity = 8, T defaultValue = default)
+        public LtTree_LegacyWithBuggyHoleList(int capacity = 8, T defaultValue = default)
         {
             _defaultValue = defaultValue;
-            Nodes = new FishList<LtNode<T>>(capacity);
-            _items = Nodes.Items;
-            Reset();
+            Nodes = new LtNode<T>[capacity];
+            _holes = new FastList<short>(capacity);
+
+            Clear();
 
             Console.WriteLine("halt here");
         }
 
         /// <summary>
-        /// All nodes are removed except for the root node at position 0. For housekeeping, all node slots are reset to constructor-supplied defaultValue to avoid leaking state.
+        /// Clears all nodes except the root node. The root node is reset to default value. Node Count will be 1 after invoking Clear().
         /// </summary>
-        public void Reset()
+        public void Clear()
         {
-            for (short i = 0; i < Nodes.RightBoundItem; i++)
-            {
-                _items[i].Principal = EMPTY_REF;
-                _items[i].Child = EMPTY_REF;
-                _items[i].StackSibling = EMPTY_REF;
-                _items[i].OverlaySibling = EMPTY_REF;
-                _items[i].Value = _defaultValue;
-            }
+            //Iterate in reverse order so that the last elements will be the first holes.
+            //Don't invoke Clear on the root
+            //Stop early before 0 because we don't want to add a hole for the root index.
+            for (short i = (short)(Nodes.Length - 1); i > 0; i--)
+                FreeNode(i);
 
-            Nodes.Clear();
-
-            //Add a node for the root.
-            Nodes.AddByRef_Unchecked();
+            ResetRootNode();
         }
 
 
@@ -66,9 +61,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>Index of the new child</returns>
         public short CreateChild(short parent)
         {
-            short i = (short)Nodes.InsertNewElementReturningIndex();
-            _items[parent].Child = i;
-            _items[i].Principal = parent;
+            short i = CheckoutNextAvailableSlot();
+            Nodes[parent].Child = i;
+            Nodes[i].Principal = parent;
             return i;
         }
 
@@ -79,9 +74,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>Index of the new child</returns>
         public short CreateOverlaySibling(short parent)
         {
-            short i = (short)Nodes.InsertNewElementReturningIndex();
-            _items[parent].OverlaySibling = i;
-            _items[i].Principal = parent;
+            short i = CheckoutNextAvailableSlot();
+            Nodes[parent].OverlaySibling = i;
+            Nodes[i].Principal = parent;
             return i;
         }
 
@@ -92,9 +87,9 @@ namespace Faeric.HighPerformanceDataStructures
         /// <returns>Index of the new child</returns>
         public short CreateStackSibling(short principal)
         {
-            short i = (short)Nodes.InsertNewElementReturningIndex();
-            _items[principal].StackSibling = i;
-            _items[i].Principal = principal;
+            short i = CheckoutNextAvailableSlot();
+            Nodes[principal].StackSibling = i;
+            Nodes[i].Principal = principal;
             return i;
         }
 
@@ -106,47 +101,47 @@ namespace Faeric.HighPerformanceDataStructures
         {
             //The node requested for removal may not be the first sibling.
             //So we get the first sibling by way of the parent.
-            short i = _items[parent].Child;
+            short i = Nodes[parent].Child;
 
-            while (_items[i].OverlaySibling != EMPTY_REF)
+            while (Nodes[i].OverlaySibling != EMPTY_REF)
             {
-                if (_items[i].OverlaySibling == node)
-                    _items[i].OverlaySibling = _items[node].OverlaySibling;
+                if (Nodes[i].OverlaySibling == node)
+                    Nodes[i].OverlaySibling = Nodes[node].OverlaySibling;
 
                 i++;
             }
 
-            i = _items[parent].Child;
-            while (_items[i].StackSibling != EMPTY_REF)
+            i = Nodes[parent].Child;
+            while (Nodes[i].StackSibling != EMPTY_REF)
             {
-                if (_items[i].StackSibling == node)
-                    _items[i].StackSibling = _items[node].StackSibling;
+                if (Nodes[i].StackSibling == node)
+                    Nodes[i].StackSibling = Nodes[node].StackSibling;
 
                 i++;
             }
 
             RemoveChildIfPresent(node);
-            RemoveNode(node);
+            FreeNode(node);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveChildIfPresent(short parent)
         {
-            if (_items[parent].Child != EMPTY_REF)
+            if (Nodes[parent].Child != EMPTY_REF)
                 RemoveChild(parent);
         }
 
         public void RemoveChild(short parent)
         {
-            short child = _items[parent].Child;
-            _items[parent].Child = EMPTY_REF;
+            short child = Nodes[parent].Child;
+            Nodes[parent].Child = EMPTY_REF;
 
-            if (_items[child].Child != EMPTY_REF)
+            if (Nodes[child].Child != EMPTY_REF)
                 RemoveChild(child);
 
             RemoveStackSiblings(child);
             RemoveOverlaySiblings(child);
-            RemoveNode(child);
+            FreeNode(child);
         }
 
         /// <summary>Removes siblings and their descedents.
@@ -156,12 +151,12 @@ namespace Faeric.HighPerformanceDataStructures
         /// <param name="i"></param>
         void RemoveStackSiblings(short i)
         {
-            short sib = _items[i].StackSibling;
+            short sib = Nodes[i].StackSibling;
             while (sib != EMPTY_REF)
             {
                 RemoveChildIfPresent(sib);
                 i = Nodes[sib].StackSibling;
-                RemoveNode(sib);
+                FreeNode(sib);
                 sib = i;
             }
         }
@@ -178,20 +173,52 @@ namespace Faeric.HighPerformanceDataStructures
             {
                 RemoveChildIfPresent(sib);
                 i = Nodes[sib].OverlaySibling;
-                RemoveNode(sib);
+                FreeNode(sib);
                 sib = i;
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void RemoveNode(short i)
+
+        short CheckoutNextAvailableSlot()
         {
-            _items[i].Principal = EMPTY_REF;
-            _items[i].Child = EMPTY_REF;
-            _items[i].StackSibling = EMPTY_REF;
-            _items[i].OverlaySibling = EMPTY_REF;
-            _items[i].Value = _defaultValue;
-            Nodes.Remove(i);
+            short iNode;
+            if (_holes.Count != 0)
+                iNode = _holes.PopLast();
+            else
+            {
+                iNode = (short)Nodes.Length;
+                var newNodeArray = new LtNode<T>[Nodes.Length * 2];
+                Array.Copy(Nodes, newNodeArray, Nodes.Length);
+                Nodes = newNodeArray;
+                _holes.EnsureCapacityMinimum(newNodeArray.Length);
+
+                for (short i = iNode; i < newNodeArray.Length; i++)
+                    FreeNode(i);
+
+            }
+
+            return iNode;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void FreeNode(short i)
+        {
+            Nodes[i].Principal = EMPTY_REF;
+            Nodes[i].Child = EMPTY_REF;
+            Nodes[i].StackSibling = EMPTY_REF;
+            Nodes[i].OverlaySibling = EMPTY_REF;
+            Nodes[i].Value = _defaultValue;
+
+            _holes.Add(i);
+        }
+
+        void ResetRootNode()
+        {
+            Nodes[0].Principal = EMPTY_REF;
+            Nodes[0].Child = EMPTY_REF;
+            Nodes[0].StackSibling = EMPTY_REF;
+            Nodes[0].OverlaySibling = EMPTY_REF;
+            Nodes[0].Value = _defaultValue;
         }
     }
 }

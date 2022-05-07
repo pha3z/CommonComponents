@@ -50,6 +50,7 @@ namespace Faeric.HighPerformanceDataStructures
         /// <summary>
         /// If you imagine the slice of array containing items with array position 0 being the leftmost element, then this is the position of the rightmost item.
         /// This is NOT necessarily the newest (most recently added) item.</summary>
+        public int RightBoundItem => _rightBoundItem;
         int _rightBoundItem = -1;
         int _newestHole = -1;
 
@@ -71,13 +72,13 @@ namespace Faeric.HighPerformanceDataStructures
         /// <summary>Adds an item without checking capacity first. Will throw Array Out-of-Bounds exception if there is no space left at the end of the internal array.</summary>
         public void Add_Unchecked(T item)
         {
-            _items[AquireNextInsertPosition()] = item;
+            _items[InsertNewElementReturningIndex()] = item;
         }
 
         /// <summary>Finds an available hole/array-element position and returns a reference to it. You can then write to it. Does not check available space in array--use with caution. If array is full, an exception will occur.</summary>
         public ref T AddByRef_Unchecked()
         {
-            return ref _items[AquireNextInsertPosition()];
+            return ref _items[InsertNewElementReturningIndex()];
         }
 
         /// <summary>Checks capacity before adding the item. Capacity will be doubled if more space is needed.</summary>
@@ -86,7 +87,7 @@ namespace Faeric.HighPerformanceDataStructures
             if (_items.Length == Count)
                 IncreaseCapacity(_items.Length * 2);
 
-            _items[AquireNextInsertPosition()] = item;
+            _items[InsertNewElementReturningIndex()] = item;
         }
 
         /// <summary>Finds an available hole/array-element position and returns a reference to it. You can then write to it.</summary>
@@ -95,11 +96,11 @@ namespace Faeric.HighPerformanceDataStructures
             if (_items.Length == Count)
                 IncreaseCapacity(_items.Length * 2);
 
-            return ref _items[AquireNextInsertPosition()];
+            return ref _items[InsertNewElementReturningIndex()];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe int AquireNextInsertPosition()
+        public unsafe int InsertNewElementReturningIndex()
         {
             Count++;
             if (_newestHole == -1)
