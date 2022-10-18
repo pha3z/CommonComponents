@@ -180,7 +180,8 @@ namespace Faeric.HighPerformanceDataStructures
         }
 
         /// <summary>Decrements Count. That's it.</summary>
-        public void RemoveLast() => _count--;
+        public void 
+            () => _count--;
         /// <summary>Reduces Count by n. That's it.</summary>
         public void RemoveLastN(int n) => _count -= n;
 

@@ -30,12 +30,9 @@ namespace Common
         /// <returns>Collection of derived types of <see cref="T" /></returns>
         public static IEnumerable<Type> FindDerivedTypes<T>(Assembly assembly)
         {
-
-            var assemblyTypes = assembly.GetTypes().ToList();
-
-            var assignableTypes = assemblyTypes.Where(IsValidType<T>).ToArray();
-
-            return assignableTypes;
+            /*var assemblyTypes = assembly.GetTypes().ToList();
+            var assignableTypes = assemblyTypes.Where(IsValidType<T>).ToArray();*/
+            return assembly.GetTypes().Where(IsValidType<T>).ToArray();
         }
 
         /// <summary>
